@@ -2,8 +2,35 @@ pragma solidity ^0.8.22;
 // SPDX-License-Identifier: UNLICENSED
 
 import "./Lottery.sol";
+import "./ERC165.sol";
 
-contract Taxpayer {
+interface ITaxpayer is ERC165 {
+    // this function was added and is different than the original code since it lacked getters
+    function get_spouse() external view returns (Taxpayer);
+
+    //We require new_spouse != address(0);
+    function marry(address new_spouse) external;
+
+    function divorce() external;
+
+    /* Transfer part of tax allowance to own spouse */
+    function transferAllowance(uint256 change) external;
+
+    function haveBirthday() external;
+
+    function setTaxAllowance(uint256 ta) external;
+
+    function getTaxAllowance() external view returns (uint256);
+
+    function isContract() external view returns (bool);
+
+    function joinLottery(address lot, uint256 r) external;
+    function marry_me(Taxpayer _spouse) external;
+    function revealLottery(address lot, uint256 r) external;
+}
+
+contract Taxpayer is ITaxpayer, ERC165Query {
+    event AssertionFailed(string reason);
     uint256 age;
 
     bool isMarried;
@@ -41,15 +68,55 @@ contract Taxpayer {
         iscontract = true;
     }
 
+    function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
+        return interfaceID == type(ERC165).interfaceId || interfaceID == type(ITaxpayer).interfaceId;
+    }
+
+    // this function was added and is different than the original code since it lacked getters
+    function get_spouse() public view returns (Taxpayer) {
+        // require(this.doesContractImplementInterface(spouse, type(ITaxpayer).interfaceId));
+        return Taxpayer(spouse);
+    }
+
+    function marry_me(Taxpayer _spouse) public {
+        // emit AssertionFailed("Marry_me NONO");
+        require(spouse == address(0));
+        require(msg.sender == address(_spouse));
+        require(doesContractImplementInterface(address(_spouse), type(ITaxpayer).interfaceId));
+
+        // if (
+        //     (spouse != address(0)) || (msg.sender != _spouse)
+        //         || (!this.doesContractImplementInterface(_spouse, type(ITaxpayer).interfaceId))
+        // ) return;
+        spouse = address(_spouse);
+    }
+
     //We require new_spouse != address(0);
     function marry(address new_spouse) public {
+        // emit AssertionFailed("Marry nono");
+        require(doesContractImplementInterface(new_spouse, type(ITaxpayer).interfaceId));
+        require(spouse == address(0));
+        require(new_spouse != address(0));
+
         spouse = new_spouse;
-        isMarried = true;
+        // isMarried = true;
+        Taxpayer(new_spouse).marry_me(this);
+        assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
+    }
+
+    function divorce_me() public {
+        require(spouse != address(0));
+        require(msg.sender == spouse);
+        require(address(Taxpayer(spouse).get_spouse()) == address(0));
+        spouse = address(0);
     }
 
     function divorce() public {
+        require(spouse != address(0));
+        address tmp = spouse;
         spouse = address(0);
-        isMarried = false;
+        Taxpayer(tmp).divorce_me();
+        // isMarried = false;
     }
 
     /* Transfer part of tax allowance to own spouse */

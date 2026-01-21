@@ -1,0 +1,300 @@
+/var/home/robTheBob/gits/sec_proj/src/ERC165.sol
+  1 |     | // SPDX-License-Identifier: Unlicense
+  2 |     | 
+  3 |     | pragma solidity ^0.8.22;
+  4 |     | 
+  5 |     | interface ERC165 {
+  6 |     |     /// @notice Query if a contract implements an interface
+  7 |     |     /// @param interfaceID The interface identifier, as specified in ERC-165
+  8 |     |     /// @dev Interface identification is specified in ERC-165. This function
+  9 |     |     ///  uses less than 30,000 gas.
+ 10 |     |     /// @return `true` if the contract implements `interfaceID` and
+ 11 |     |     ///  `interfaceID` is not 0xffffffff, `false` otherwise
+ 12 |     |     function supportsInterface(bytes4 interfaceID) external view returns (bool);
+ 13 |     | }
+ 14 |     | 
+ 15 |     | contract ERC165Query {
+ 16 |     |     bytes4 constant InvalidID = 0xffffffff;
+ 17 |     |     bytes4 constant ERC165ID = 0x01ffc9a7;
+ 18 |     | 
+ 19 |     |     function doesContractImplementInterface(address _contract, bytes4 _interfaceId) external view returns (bool) {
+ 20 |     |         uint256 success;
+ 21 |     |         uint256 result;
+ 22 |     | 
+ 23 |     |         (success, result) = noThrowCall(_contract, ERC165ID);
+ 24 |     |         if ((success == 0) || (result == 0)) {
+ 25 |     |             return false;
+ 26 |     |         }
+ 27 |     | 
+ 28 |     |         (success, result) = noThrowCall(_contract, InvalidID);
+ 29 |     |         if ((success == 0) || (result != 0)) {
+ 30 |     |             return false;
+ 31 |     |         }
+ 32 |     | 
+ 33 |     |         (success, result) = noThrowCall(_contract, _interfaceId);
+ 34 |     |         if ((success == 1) && (result == 1)) {
+ 35 |     |             return true;
+ 36 |     |         }
+ 37 |     |         return false;
+ 38 |     |     }
+ 39 |     | 
+ 40 |     |     function noThrowCall(address _contract, bytes4 _interfaceId)
+ 41 |     |         internal
+ 42 |     |         view
+ 43 |     |         returns (uint256 success, uint256 result)
+ 44 |     |     {
+ 45 |     |         bytes4 erc165ID = ERC165ID;
+ 46 |     | 
+ 47 |     |         assembly {
+ 48 |     |             let x := mload(0x40) // Find empty storage location using "free memory pointer"
+ 49 |     |             mstore(x, erc165ID) // Place signature at beginning of empty storage
+ 50 |     |             mstore(add(x, 0x04), _interfaceId) // Place first argument directly next to signature
+ 51 |     | 
+ 52 |     |             success := staticcall(
+ 53 |     |                 30000, // 30k gas
+ 54 |     |                 _contract, // To addr
+ 55 |     |                 x, // Inputs are stored at location x
+ 56 |     |                 0x24, // Inputs are 36 bytes long
+ 57 |     |                 x, // Store output over input (saves space)
+ 58 |     |                 0x20
+ 59 |     |             ) // Outputs are 32 bytes long
+ 60 |     | 
+ 61 |     |             result := mload(x) // Load the result
+ 62 |     |         }
+ 63 |     |     }
+ 64 |     | }
+ 65 |     | 
+
+/var/home/robTheBob/gits/sec_proj/src/Lottery.sol
+  1 |     | pragma solidity ^0.8.22;
+  2 |     | // SPDX-License-Identifier: UNLICENSED
+  3 |     | import "./Taxpayer.sol";
+  4 |     | 
+  5 |     | contract Lottery {
+  6 |     |     address owner;
+  7 |     |     mapping(address => bytes32) commits;
+  8 |     |     mapping(address => uint256) reveals;
+  9 |     |     address[] revealed;
+ 10 |     | 
+ 11 |     |     uint256 startTime;
+ 12 |     |     uint256 revealTime;
+ 13 |     |     uint256 endTime;
+ 14 |     |     uint256 period;
+ 15 |     |     bool iscontract;
+ 16 |     | 
+ 17 |     |     // Initialize the registry with the lottery period.
+ 18 |     |     constructor(uint256 p) {
+ 19 |     |         period = p;
+ 20 |     |         startTime = 0;
+ 21 |     |         endTime = 0;
+ 22 |     |         iscontract = true;
+ 23 |     |     }
+ 24 |     | 
+ 25 |     |     //If the lottery has not started, anyone can invoke a lottery.
+ 26 |     |     function startLottery() public {
+ 27 |     |         require(startTime == 0);
+ 28 |     |         //startTime current time. Users send their committed value
+ 29 |     |         startTime = block.timestamp;
+ 30 |     |         //revealTime  time for revealing. User reveal their value
+ 31 |     |         revealTime = startTime + period;
+ 32 |     |         //endTime a winner can be computed
+ 33 |     |         endTime = revealTime + period;
+ 34 |     |     }
+ 35 |     | 
+ 36 |     |     //A taxpayer send his own commitment.
+ 37 |     |     function commit(bytes32 y) public {
+ 38 |     |         require(block.timestamp >= startTime);
+ 39 |     |         commits[msg.sender] = y;
+ 40 |     |     }
+ 41 |     | 
+ 42 |     |     //A valid taxpayer who sent his own commitment, sends the revealing value.
+ 43 |     |     function reveal(uint256 rev) public {
+ 44 |     |         require(block.timestamp >= revealTime);
+ 45 |     |         require(keccak256(abi.encode(rev)) == commits[msg.sender]);
+ 46 |     |         revealed.push(msg.sender);
+ 47 |     |         reveals[msg.sender] = uint256(rev);
+ 48 |     |     }
+ 49 |     | 
+ 50 |     |     //Ends the lottery and compute the winner.
+ 51 |     |     function endLottery() public {
+ 52 |     |         require(block.timestamp >= endTime);
+ 53 |     |         uint256 total = 0;
+ 54 |     |         for (uint256 i = 0; i < revealed.length; i++) {
+ 55 |     |             total += reveals[revealed[i]];
+ 56 |     |         }
+ 57 |     |         Taxpayer(revealed[total % revealed.length]).setTaxAllowance(7000);
+ 58 |     |         startTime = 0;
+ 59 |     |         revealTime = 0;
+ 60 |     |         endTime = 0;
+ 61 |     |     }
+ 62 |     | 
+ 63 |     |     function isContract() public view returns (bool) {
+ 64 |     |         return iscontract;
+ 65 |     |     }
+ 66 |     | }
+ 67 |     | 
+
+/var/home/robTheBob/gits/sec_proj/src/Taxpayer.sol
+   1 |     | pragma solidity ^0.8.22;
+   2 |     | // SPDX-License-Identifier: UNLICENSED
+   3 |     | 
+   4 |     | import "./Lottery.sol";
+   5 |     | import "./ERC165.sol";
+   6 |     | 
+   7 |     | interface ITaxpayer is ERC165 {
+   8 |     |     // this function was added and is different than the original code since it lacked getters
+   9 |     |     function get_spouse() external view returns (Taxpayer);
+  10 |     | 
+  11 |     |     //We require new_spouse != address(0);
+  12 |     |     function marry(address new_spouse) external;
+  13 |     | 
+  14 |     |     function divorce() external;
+  15 |     | 
+  16 |     |     /* Transfer part of tax allowance to own spouse */
+  17 |     |     function transferAllowance(uint256 change) external;
+  18 |     | 
+  19 |     |     function haveBirthday() external;
+  20 |     | 
+  21 |     |     function setTaxAllowance(uint256 ta) external;
+  22 |     | 
+  23 |     |     function getTaxAllowance() external view returns (uint256);
+  24 |     | 
+  25 |     |     function isContract() external view returns (bool);
+  26 |     | 
+  27 |     |     function joinLottery(address lot, uint256 r) external;
+  28 |     | 
+  29 |     |     function revealLottery(address lot, uint256 r) external;
+  30 |     | }
+  31 |     | 
+  32 | *   | contract Taxpayer is ITaxpayer, ERC165Query {
+  33 |     |     uint256 age;
+  34 |     | 
+  35 |     |     bool isMarried;
+  36 |     | 
+  37 |     |     bool iscontract;
+  38 |     | 
+  39 |     |     /* Reference to spouse if person is married, address(0) otherwise */
+  40 |     |     address spouse;
+  41 |     | 
+  42 |     |     address parent1;
+  43 |     |     address parent2;
+  44 |     | 
+  45 |     |     /* Constant default income tax allowance */
+  46 | *   |     uint256 constant DEFAULT_ALLOWANCE = 5000;
+  47 |     | 
+  48 |     |     /* Constant income tax allowance for Older Taxpayers over 65 */
+  49 |     |     uint256 constant ALLOWANCE_OAP = 7000;
+  50 |     | 
+  51 |     |     /* Income tax allowance */
+  52 |     |     uint256 tax_allowance;
+  53 |     | 
+  54 |     |     uint256 income;
+  55 |     | 
+  56 |     |     uint256 rev;
+  57 |     | 
+  58 |     |     //Parents are taxpayers
+  59 | *   |     constructor(address p1, address p2) {
+  60 | *   |         age = 0;
+  61 | *   |         isMarried = false;
+  62 | *   |         parent1 = p1;
+  63 | *   |         parent2 = p2;
+  64 | *   |         spouse = address(0);
+  65 | *   |         income = 0;
+  66 | *   |         tax_allowance = DEFAULT_ALLOWANCE;
+  67 | *   |         iscontract = true;
+  68 |     |     }
+  69 |     | 
+  70 |     |     function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
+  71 |     |         return interfaceID == type(ERC165).interfaceId || interfaceID == type(ITaxpayer).interfaceId;
+  72 |     |     }
+  73 |     | 
+  74 |     |     // this function was added and is different than the original code since it lacked getters
+  75 |     |     function get_spouse() public view returns (Taxpayer) {
+  76 |     |         return Taxpayer(spouse);
+  77 |     |     }
+  78 |     | 
+  79 |     |     //We require new_spouse != address(0);
+  80 |     |     function marry(address new_spouse) public {
+  81 |     |         require(this.doesContractImplementInterface(new_spouse, type(ITaxpayer).interfaceId));
+  82 |     | 
+  83 |     |         spouse = new_spouse;
+  84 |     |         isMarried = true;
+  85 |     |     }
+  86 |     | 
+  87 |     |     function divorce() public {
+  88 |     |         spouse = address(0);
+  89 |     |         isMarried = false;
+  90 |     |     }
+  91 |     | 
+  92 |     |     /* Transfer part of tax allowance to own spouse */
+  93 |     |     function transferAllowance(uint256 change) public {
+  94 |     |         tax_allowance = tax_allowance - change;
+  95 |     |         Taxpayer sp = Taxpayer(address(spouse));
+  96 |     |         sp.setTaxAllowance(sp.getTaxAllowance() + change);
+  97 |     |     }
+  98 |     | 
+  99 |     |     function haveBirthday() public {
+ 100 |     |         age++;
+ 101 |     |     }
+ 102 |     | 
+ 103 |     |     function setTaxAllowance(uint256 ta) public {
+ 104 |     |         require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
+ 105 |     |         tax_allowance = ta;
+ 106 |     |     }
+ 107 |     | 
+ 108 |     |     function getTaxAllowance() public view returns (uint256) {
+ 109 |     |         return tax_allowance;
+ 110 |     |     }
+ 111 |     | 
+ 112 |     |     function isContract() public view returns (bool) {
+ 113 |     |         return iscontract;
+ 114 |     |     }
+ 115 |     | 
+ 116 |     |     function joinLottery(address lot, uint256 r) public {
+ 117 |     |         Lottery l = Lottery(lot);
+ 118 |     |         l.commit(keccak256(abi.encode(r)));
+ 119 |     |         rev = r;
+ 120 |     |     }
+ 121 |     | 
+ 122 |     |     function revealLottery(address lot, uint256 r) public {
+ 123 |     |         Lottery l = Lottery(lot);
+ 124 |     |         l.reveal(r);
+ 125 |     |         rev = 0;
+ 126 |     |     }
+ 127 |     | }
+ 128 |     | 
+
+/var/home/robTheBob/gits/sec_proj/test/testtaxpayer.sol
+  1 |     | // SPDX-License-Identifier: Unlicense
+  2 |     | pragma solidity ^0.8.22;
+  3 |     | import "../src/Taxpayer.sol";
+  4 |     | 
+  5 | *r  | contract Test {
+  6 |     |     event AssertionFailed(string reason);
+  7 |     |     Taxpayer[] taxpayer;
+  8 | *   |     uint256 internal constant N_OF_TAXPAYER = 10;
+  9 |     | 
+ 10 | *   |     constructor() public {
+ 11 | *   |         for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
+ 12 | *   |             taxpayer.push(new Taxpayer(address(0), address(0)));
+ 13 |     |         }
+ 14 |     |     }
+ 15 |     | 
+ 16 |     |     function createOldTaxpayer() internal returns (Taxpayer) {}
+ 17 |     | 
+ 18 |     |     function checkMarried(Taxpayer t1) internal view {
+ 19 |     |         Taxpayer spouse = t1.get_spouse();
+ 20 |     |         assert(address(spouse.get_spouse()) == address(t1));
+ 21 |     |     }
+ 22 |     | 
+ 23 |     |     function invariant_are_both_married() public {
+ 24 |     |         for (uint256 index = 0; index < taxpayer.length; index++) {
+ 25 |     |             checkMarried(taxpayer[index]);
+ 26 |     |         }
+ 27 |     |         emit AssertionFailed("Suc");
+ 28 |     |     }
+ 29 |     |     // function invariant_no_pedo() public view returns (bool) {}
+ 30 |     | }
+ 31 |     | 
+ 32 |     | 
+
