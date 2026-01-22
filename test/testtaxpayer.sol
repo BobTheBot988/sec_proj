@@ -6,7 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 contract Test {
     event AssertionFailed(string reason);
     event Message(string msg);
-
+    uint256 constant oldAge = 1;
     using Strings for uint256;
 
     Taxpayer[] taxpayer;
@@ -19,8 +19,6 @@ contract Test {
         // taxpayer[0].marry(address(taxpayer[1]));
         // taxpayer[0].setTaxAllowance(1000000);
     }
-
-    function createOldTaxpayer() internal returns (Taxpayer) {}
 
     function checkMarried(Taxpayer t1) internal {
         Taxpayer spouse = t1.get_spouse();
@@ -55,12 +53,37 @@ contract Test {
         }
     }
 
-    function echidna_is_tax_allowance_good() public {
-        for (uint256 index = 0; index < taxpayer.length; index++) {
-            emit Message(Strings.toString(index));
-            checkAllowance(taxpayer[index]);
+    function checkAgeAllowance(Taxpayer t1) internal {
+        uint256 my_mod = 0;
+        uint256 my_num = 5000;
+        if (t1.getAge() >= oldAge) {
+            my_mod += 2000;
+        }
+        Taxpayer sp = t1.get_spouse();
+        if (address(sp) != address(0)) {
+            my_num = my_num * 2;
+            if (sp.getAge() >= oldAge) {
+                my_mod += 2000;
+            }
+        }
+        if (t1.getPoolAllowance() != (my_num + my_mod)) {
+            emit AssertionFailed("Suca");
         }
     }
+
+    function echidna_is_aged_tax_allowance_good() public {
+        for (uint256 index = 0; index < taxpayer.length; index++) {
+            emit Message(Strings.toString(index));
+            checkAgeAllowance(taxpayer[index]);
+        }
+    }
+
+    // function echidna_is_tax_allowance_good() public {
+    //     for (uint256 index = 0; index < taxpayer.length; index++) {
+    //         emit Message(Strings.toString(index));
+    //         checkAllowance(taxpayer[index]);
+    //     }
+    // }
 
     function isMarriedGood(Taxpayer t1) internal view returns (bool ret) {
         Taxpayer spouse = t1.get_spouse();
