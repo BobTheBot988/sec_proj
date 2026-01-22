@@ -50,7 +50,7 @@ contract Test {
                 emit AssertionFailed("The pool allowance must be equal for both spouses");
             }
             if ((t1.getTaxAllowance() + sp.getTaxAllowance()) > t1.getPoolAllowance()) {
-                emit AssertionFailed("Too much money saved in taxes but both");
+                emit AssertionFailed("Too much money saved in taxes naughty couple");
             }
         }
     }

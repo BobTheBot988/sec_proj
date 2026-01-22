@@ -21,11 +21,10 @@ interface ITaxpayer is ERC165 {
     function setTaxAllowance(uint256 ta) external;
 
     function getPoolAllowance() external view returns (uint256);
-
+    function setPoolAllowance(uint256 _pool_tax_allowance) external;
     function getTaxAllowance() external view returns (uint256);
 
     // function isContract() external view returns (bool);
-
     function joinLottery(address lot, uint256 r) external;
     function marry_me(Taxpayer _spouse) external;
     function revealLottery(address lot, uint256 r) external;
@@ -101,7 +100,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         // ) return;
         //
         spouse = address(_spouse);
-        pool_tax_allowance += Taxpayer(spouse).getTaxAllowance();
+        pool_tax_allowance = (pool_tax_allowance + Taxpayer(spouse).getTaxAllowance()) % 10001;
     }
 
     //We require new_spouse != address(0);
@@ -113,7 +112,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         require(address(new_spouse) != address(this));
 
         spouse = new_spouse;
-        pool_tax_allowance += Taxpayer(spouse).getTaxAllowance();
+        pool_tax_allowance = (pool_tax_allowance + Taxpayer(spouse).getTaxAllowance()) % 10001;
         // isMarried = true;
         Taxpayer(new_spouse).marry_me(this);
         // assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
@@ -129,6 +128,10 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         spouse = address(0);
         tax_allowance = DEFAULT_ALLOWANCE;
         pool_tax_allowance = DEFAULT_ALLOWANCE;
+        if (age >= 65) {
+            tax_allowance = ALLOWANCE_OAP;
+            pool_tax_allowance = ALLOWANCE_OAP;
+        }
     }
 
     function divorce() public {
@@ -137,6 +140,10 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         spouse = address(0);
         tax_allowance = DEFAULT_ALLOWANCE;
         pool_tax_allowance = DEFAULT_ALLOWANCE;
+        if (age >= 65) {
+            tax_allowance = ALLOWANCE_OAP;
+            pool_tax_allowance = ALLOWANCE_OAP;
+        }
         Taxpayer(tmp).divorce_me();
         // isMarried = false;
     }
@@ -161,12 +168,23 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         return pool_tax_allowance;
     }
 
+    function setPoolAllowance(uint256 _pool_tax_allowance) public {
+        require(spouse != address(0));
+        require(msg.sender == spouse);
+        pool_tax_allowance = (_pool_tax_allowance % 10001);
+        assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
+    }
+
     function haveBirthday() public {
         age++;
-        if (age == 65) {
-            tax_allowance = tax_allowance + 2000;
-            pool_tax_allowance = pool_tax_allowance + 2000;
-        }
+        // if (age == 65) {
+        //     tax_allowance = ALLOWANCE_OAP;
+        //     pool_tax_allowance = pool_tax_allowance + 2000;
+        //     if (spouse != address(0)) {
+        //         Taxpayer(spouse).setPoolAllowance(pool_tax_allowance);
+        //         assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
+        //     }
+        // }
     }
 
     function setTaxAllowance(uint256 ta) public {
@@ -184,10 +202,6 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     function getTaxAllowance() public view returns (uint256) {
         return tax_allowance;
     }
-
-    // function isContract() public view returns (bool) {
-    //     return iscontract;
-    // }
 
     function joinLottery(address lot, uint256 r) public {
         Lottery l = Lottery(lot);
