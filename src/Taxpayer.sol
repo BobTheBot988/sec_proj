@@ -20,9 +20,11 @@ interface ITaxpayer is ERC165 {
 
     function setTaxAllowance(uint256 ta) external;
 
+    function getPoolAllowance() external view returns (uint256);
+
     function getTaxAllowance() external view returns (uint256);
 
-    function isContract() external view returns (bool);
+    // function isContract() external view returns (bool);
 
     function joinLottery(address lot, uint256 r) external;
     function marry_me(Taxpayer _spouse) external;
@@ -32,7 +34,6 @@ interface ITaxpayer is ERC165 {
 contract Taxpayer is ITaxpayer, ERC165Query {
     event AssertionFailed(string reason);
     uint256 age;
-
     bool isMarried;
 
     bool iscontract;
@@ -40,8 +41,8 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     /* Reference to spouse if person is married, address(0) otherwise */
     address spouse;
 
-    address parent1;
-    address parent2;
+    address immutable parent1;
+    address immutable parent2;
 
     /* Constant default income tax allowance */
     uint256 constant DEFAULT_ALLOWANCE = 5000;
@@ -51,10 +52,18 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     /* Income tax allowance */
     uint256 tax_allowance;
-
+    uint256 pool_tax_allowance;
     uint256 income;
 
     uint256 rev;
+    bool lock;
+
+    modifier nonReentrant() {
+        require(!lock);
+        lock = true;
+        _;
+        lock = false;
+    }
 
     //Parents are taxpayers
     constructor(address p1, address p2) {
@@ -65,7 +74,8 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         spouse = address(0);
         income = 0;
         tax_allowance = DEFAULT_ALLOWANCE;
-        iscontract = true;
+        pool_tax_allowance = DEFAULT_ALLOWANCE;
+        // Useless if we implement the ERC165 iscontract = true;
     }
 
     function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
@@ -78,30 +88,38 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         return Taxpayer(spouse);
     }
 
-    function marry_me(Taxpayer _spouse) public {
+    function marry_me(Taxpayer _spouse) public nonReentrant {
         // emit AssertionFailed("Marry_me NONO");
         require(spouse == address(0));
         require(msg.sender == address(_spouse));
+        require(address(_spouse) != address(this));
         require(doesContractImplementInterface(address(_spouse), type(ITaxpayer).interfaceId));
 
         // if (
         //     (spouse != address(0)) || (msg.sender != _spouse)
         //         || (!this.doesContractImplementInterface(_spouse, type(ITaxpayer).interfaceId))
         // ) return;
+        //
         spouse = address(_spouse);
+        pool_tax_allowance += Taxpayer(spouse).getTaxAllowance();
     }
 
     //We require new_spouse != address(0);
-    function marry(address new_spouse) public {
+    function marry(address new_spouse) public nonReentrant {
         // emit AssertionFailed("Marry nono");
         require(doesContractImplementInterface(new_spouse, type(ITaxpayer).interfaceId));
         require(spouse == address(0));
         require(new_spouse != address(0));
+        require(address(new_spouse) != address(this));
 
         spouse = new_spouse;
+        pool_tax_allowance += Taxpayer(spouse).getTaxAllowance();
         // isMarried = true;
         Taxpayer(new_spouse).marry_me(this);
-        assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
+        // assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
+        if (address(this) != address(Taxpayer(new_spouse).get_spouse())) {
+            emit AssertionFailed("Post condition violated: You did not marry your spouse");
+        }
     }
 
     function divorce_me() public {
@@ -109,39 +127,67 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         require(msg.sender == spouse);
         require(address(Taxpayer(spouse).get_spouse()) == address(0));
         spouse = address(0);
+        tax_allowance = DEFAULT_ALLOWANCE;
+        pool_tax_allowance = DEFAULT_ALLOWANCE;
     }
 
     function divorce() public {
         require(spouse != address(0));
         address tmp = spouse;
         spouse = address(0);
+        tax_allowance = DEFAULT_ALLOWANCE;
+        pool_tax_allowance = DEFAULT_ALLOWANCE;
         Taxpayer(tmp).divorce_me();
         // isMarried = false;
     }
 
     /* Transfer part of tax allowance to own spouse */
     function transferAllowance(uint256 change) public {
-        tax_allowance = tax_allowance - change;
+        require(spouse != address(0));
         Taxpayer sp = Taxpayer(address(spouse));
-        sp.setTaxAllowance(sp.getTaxAllowance() + change);
+        uint256 sp_tax_allowance = sp.getTaxAllowance();
+
+        require(sp_tax_allowance + tax_allowance == (pool_tax_allowance));
+        tax_allowance = tax_allowance - change;
+        sp_tax_allowance = sp.getTaxAllowance();
+        sp.setTaxAllowance(sp_tax_allowance + change);
+        // we need to make the DEFAULT_ALLOWANCE dynamic
+        if (sp.getTaxAllowance() + tax_allowance != (pool_tax_allowance)) {
+            emit AssertionFailed("You tried to cheat the system, PREPARE TO DIE!!!");
+        }
+    }
+
+    function getPoolAllowance() public view returns (uint256) {
+        return pool_tax_allowance;
     }
 
     function haveBirthday() public {
         age++;
+        if (age == 65) {
+            tax_allowance = tax_allowance + 2000;
+            pool_tax_allowance = pool_tax_allowance + 2000;
+        }
     }
 
     function setTaxAllowance(uint256 ta) public {
-        require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
+        require(doesContractImplementInterface(msg.sender, type(ITaxpayer).interfaceId));
+        require(spouse != address(0));
+        require(msg.sender == spouse);
+        // This assures me that my spouse actually called the function
+        // We should think about the lottery require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
         tax_allowance = ta;
+        if (Taxpayer(spouse).getTaxAllowance() + ta != (pool_tax_allowance)) {
+            emit AssertionFailed("You and your wife tried to cheat");
+        }
     }
 
     function getTaxAllowance() public view returns (uint256) {
         return tax_allowance;
     }
 
-    function isContract() public view returns (bool) {
-        return iscontract;
-    }
+    // function isContract() public view returns (bool) {
+    //     return iscontract;
+    // }
 
     function joinLottery(address lot, uint256 r) public {
         Lottery l = Lottery(lot);

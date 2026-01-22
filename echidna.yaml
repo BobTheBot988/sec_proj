@@ -1,2 +1,3 @@
 allContracts: true
+# allContracts: false
 prefix: "invariant_"

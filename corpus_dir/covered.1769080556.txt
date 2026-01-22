@@ -1,0 +1,3221 @@
+/var/home/robTheBob/gits/sec_proj/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/Bytes.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | // OpenZeppelin Contracts (last updated v5.5.0) (utils/Bytes.sol)
+   3 |     | 
+   4 |     | pragma solidity ^0.8.24;
+   5 |     | 
+   6 |     | import {Math} from "./math/Math.sol";
+   7 |     | 
+   8 |     | /**
+   9 |     |  * @dev Bytes operations.
+  10 |     |  */
+  11 |     | library Bytes {
+  12 |     |     /**
+  13 |     |      * @dev Forward search for `s` in `buffer`
+  14 |     |      * * If `s` is present in the buffer, returns the index of the first instance
+  15 |     |      * * If `s` is not present in the buffer, returns type(uint256).max
+  16 |     |      *
+  17 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf[Javascript's `Array.indexOf`]
+  18 |     |      */
+  19 |     |     function indexOf(bytes memory buffer, bytes1 s) internal pure returns (uint256) {
+  20 |     |         return indexOf(buffer, s, 0);
+  21 |     |     }
+  22 |     | 
+  23 |     |     /**
+  24 |     |      * @dev Forward search for `s` in `buffer` starting at position `pos`
+  25 |     |      * * If `s` is present in the buffer (at or after `pos`), returns the index of the next instance
+  26 |     |      * * If `s` is not present in the buffer (at or after `pos`), returns type(uint256).max
+  27 |     |      *
+  28 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf[Javascript's `Array.indexOf`]
+  29 |     |      */
+  30 |     |     function indexOf(bytes memory buffer, bytes1 s, uint256 pos) internal pure returns (uint256) {
+  31 |     |         uint256 length = buffer.length;
+  32 |     |         for (uint256 i = pos; i < length; ++i) {
+  33 |     |             if (bytes1(_unsafeReadBytesOffset(buffer, i)) == s) {
+  34 |     |                 return i;
+  35 |     |             }
+  36 |     |         }
+  37 |     |         return type(uint256).max;
+  38 |     |     }
+  39 |     | 
+  40 |     |     /**
+  41 |     |      * @dev Backward search for `s` in `buffer`
+  42 |     |      * * If `s` is present in the buffer, returns the index of the last instance
+  43 |     |      * * If `s` is not present in the buffer, returns type(uint256).max
+  44 |     |      *
+  45 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf[Javascript's `Array.lastIndexOf`]
+  46 |     |      */
+  47 |     |     function lastIndexOf(bytes memory buffer, bytes1 s) internal pure returns (uint256) {
+  48 |     |         return lastIndexOf(buffer, s, type(uint256).max);
+  49 |     |     }
+  50 |     | 
+  51 |     |     /**
+  52 |     |      * @dev Backward search for `s` in `buffer` starting at position `pos`
+  53 |     |      * * If `s` is present in the buffer (at or before `pos`), returns the index of the previous instance
+  54 |     |      * * If `s` is not present in the buffer (at or before `pos`), returns type(uint256).max
+  55 |     |      *
+  56 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf[Javascript's `Array.lastIndexOf`]
+  57 |     |      */
+  58 |     |     function lastIndexOf(bytes memory buffer, bytes1 s, uint256 pos) internal pure returns (uint256) {
+  59 |     |         unchecked {
+  60 |     |             uint256 length = buffer.length;
+  61 |     |             for (uint256 i = Math.min(Math.saturatingAdd(pos, 1), length); i > 0; --i) {
+  62 |     |                 if (bytes1(_unsafeReadBytesOffset(buffer, i - 1)) == s) {
+  63 |     |                     return i - 1;
+  64 |     |                 }
+  65 |     |             }
+  66 |     |             return type(uint256).max;
+  67 |     |         }
+  68 |     |     }
+  69 |     | 
+  70 |     |     /**
+  71 |     |      * @dev Copies the content of `buffer`, from `start` (included) to the end of `buffer` into a new bytes object in
+  72 |     |      * memory.
+  73 |     |      *
+  74 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice[Javascript's `Array.slice`]
+  75 |     |      */
+  76 |     |     function slice(bytes memory buffer, uint256 start) internal pure returns (bytes memory) {
+  77 |     |         return slice(buffer, start, buffer.length);
+  78 |     |     }
+  79 |     | 
+  80 |     |     /**
+  81 |     |      * @dev Copies the content of `buffer`, from `start` (included) to `end` (excluded) into a new bytes object in
+  82 |     |      * memory. The `end` argument is truncated to the length of the `buffer`.
+  83 |     |      *
+  84 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice[Javascript's `Array.slice`]
+  85 |     |      */
+  86 |     |     function slice(bytes memory buffer, uint256 start, uint256 end) internal pure returns (bytes memory) {
+  87 |     |         // sanitize
+  88 |     |         end = Math.min(end, buffer.length);
+  89 |     |         start = Math.min(start, end);
+  90 |     | 
+  91 |     |         // allocate and copy
+  92 |     |         bytes memory result = new bytes(end - start);
+  93 |     |         assembly ("memory-safe") {
+  94 |     |             mcopy(add(result, 0x20), add(add(buffer, 0x20), start), sub(end, start))
+  95 |     |         }
+  96 |     | 
+  97 |     |         return result;
+  98 |     |     }
+  99 |     | 
+ 100 |     |     /**
+ 101 |     |      * @dev Moves the content of `buffer`, from `start` (included) to the end of `buffer` to the start of that buffer.
+ 102 |     |      *
+ 103 |     |      * NOTE: This function modifies the provided buffer in place. If you need to preserve the original buffer, use {slice} instead
+ 104 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice[Javascript's `Array.splice`]
+ 105 |     |      */
+ 106 |     |     function splice(bytes memory buffer, uint256 start) internal pure returns (bytes memory) {
+ 107 |     |         return splice(buffer, start, buffer.length);
+ 108 |     |     }
+ 109 |     | 
+ 110 |     |     /**
+ 111 |     |      * @dev Moves the content of `buffer`, from `start` (included) to end (excluded) to the start of that buffer. The
+ 112 |     |      * `end` argument is truncated to the length of the `buffer`.
+ 113 |     |      *
+ 114 |     |      * NOTE: This function modifies the provided buffer in place. If you need to preserve the original buffer, use {slice} instead
+ 115 |     |      * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice[Javascript's `Array.splice`]
+ 116 |     |      */
+ 117 |     |     function splice(bytes memory buffer, uint256 start, uint256 end) internal pure returns (bytes memory) {
+ 118 |     |         // sanitize
+ 119 |     |         end = Math.min(end, buffer.length);
+ 120 |     |         start = Math.min(start, end);
+ 121 |     | 
+ 122 |     |         // allocate and copy
+ 123 |     |         assembly ("memory-safe") {
+ 124 |     |             mcopy(add(buffer, 0x20), add(add(buffer, 0x20), start), sub(end, start))
+ 125 |     |             mstore(buffer, sub(end, start))
+ 126 |     |         }
+ 127 |     | 
+ 128 |     |         return buffer;
+ 129 |     |     }
+ 130 |     | 
+ 131 |     |     /**
+ 132 |     |      * @dev Concatenate an array of bytes into a single bytes object.
+ 133 |     |      *
+ 134 |     |      * For fixed bytes types, we recommend using the solidity built-in `bytes.concat` or (equivalent)
+ 135 |     |      * `abi.encodePacked`.
+ 136 |     |      *
+ 137 |     |      * NOTE: this could be done in assembly with a single loop that expands starting at the FMP, but that would be
+ 138 |     |      * significantly less readable. It might be worth benchmarking the savings of the full-assembly approach.
+ 139 |     |      */
+ 140 |     |     function concat(bytes[] memory buffers) internal pure returns (bytes memory) {
+ 141 |     |         uint256 length = 0;
+ 142 |     |         for (uint256 i = 0; i < buffers.length; ++i) {
+ 143 |     |             length += buffers[i].length;
+ 144 |     |         }
+ 145 |     | 
+ 146 |     |         bytes memory result = new bytes(length);
+ 147 |     | 
+ 148 |     |         uint256 offset = 0x20;
+ 149 |     |         for (uint256 i = 0; i < buffers.length; ++i) {
+ 150 |     |             bytes memory input = buffers[i];
+ 151 |     |             assembly ("memory-safe") {
+ 152 |     |                 mcopy(add(result, offset), add(input, 0x20), mload(input))
+ 153 |     |             }
+ 154 |     |             unchecked {
+ 155 |     |                 offset += input.length;
+ 156 |     |             }
+ 157 |     |         }
+ 158 |     | 
+ 159 |     |         return result;
+ 160 |     |     }
+ 161 |     | 
+ 162 |     |     /**
+ 163 |     |      * @dev Returns true if the two byte buffers are equal.
+ 164 |     |      */
+ 165 |     |     function equal(bytes memory a, bytes memory b) internal pure returns (bool) {
+ 166 |     |         return a.length == b.length && keccak256(a) == keccak256(b);
+ 167 |     |     }
+ 168 |     | 
+ 169 |     |     /**
+ 170 |     |      * @dev Reverses the byte order of a bytes32 value, converting between little-endian and big-endian.
+ 171 |     |      * Inspired by https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel[Reverse Parallel]
+ 172 |     |      */
+ 173 |     |     function reverseBytes32(bytes32 value) internal pure returns (bytes32) {
+ 174 |     |         value = // swap bytes
+ 175 |     |             ((value >> 8) & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) |
+ 176 |     |             ((value & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
+ 177 |     |         value = // swap 2-byte long pairs
+ 178 |     |             ((value >> 16) & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) |
+ 179 |     |             ((value & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
+ 180 |     |         value = // swap 4-byte long pairs
+ 181 |     |             ((value >> 32) & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) |
+ 182 |     |             ((value & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) << 32);
+ 183 |     |         value = // swap 8-byte long pairs
+ 184 |     |             ((value >> 64) & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) |
+ 185 |     |             ((value & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) << 64);
+ 186 |     |         return (value >> 128) | (value << 128); // swap 16-byte long pairs
+ 187 |     |     }
+ 188 |     | 
+ 189 |     |     /// @dev Same as {reverseBytes32} but optimized for 128-bit values.
+ 190 |     |     function reverseBytes16(bytes16 value) internal pure returns (bytes16) {
+ 191 |     |         value = // swap bytes
+ 192 |     |             ((value & 0xFF00FF00FF00FF00FF00FF00FF00FF00) >> 8) |
+ 193 |     |             ((value & 0x00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
+ 194 |     |         value = // swap 2-byte long pairs
+ 195 |     |             ((value & 0xFFFF0000FFFF0000FFFF0000FFFF0000) >> 16) |
+ 196 |     |             ((value & 0x0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
+ 197 |     |         value = // swap 4-byte long pairs
+ 198 |     |             ((value & 0xFFFFFFFF00000000FFFFFFFF00000000) >> 32) |
+ 199 |     |             ((value & 0x00000000FFFFFFFF00000000FFFFFFFF) << 32);
+ 200 |     |         return (value >> 64) | (value << 64); // swap 8-byte long pairs
+ 201 |     |     }
+ 202 |     | 
+ 203 |     |     /// @dev Same as {reverseBytes32} but optimized for 64-bit values.
+ 204 |     |     function reverseBytes8(bytes8 value) internal pure returns (bytes8) {
+ 205 |     |         value = ((value & 0xFF00FF00FF00FF00) >> 8) | ((value & 0x00FF00FF00FF00FF) << 8); // swap bytes
+ 206 |     |         value = ((value & 0xFFFF0000FFFF0000) >> 16) | ((value & 0x0000FFFF0000FFFF) << 16); // swap 2-byte long pairs
+ 207 |     |         return (value >> 32) | (value << 32); // swap 4-byte long pairs
+ 208 |     |     }
+ 209 |     | 
+ 210 |     |     /// @dev Same as {reverseBytes32} but optimized for 32-bit values.
+ 211 |     |     function reverseBytes4(bytes4 value) internal pure returns (bytes4) {
+ 212 |     |         value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8); // swap bytes
+ 213 |     |         return (value >> 16) | (value << 16); // swap 2-byte long pairs
+ 214 |     |     }
+ 215 |     | 
+ 216 |     |     /// @dev Same as {reverseBytes32} but optimized for 16-bit values.
+ 217 |     |     function reverseBytes2(bytes2 value) internal pure returns (bytes2) {
+ 218 |     |         return (value >> 8) | (value << 8);
+ 219 |     |     }
+ 220 |     | 
+ 221 |     |     /**
+ 222 |     |      * @dev Counts the number of leading zero bits a bytes array. Returns `8 * buffer.length`
+ 223 |     |      * if the buffer is all zeros.
+ 224 |     |      */
+ 225 |     |     function clz(bytes memory buffer) internal pure returns (uint256) {
+ 226 |     |         for (uint256 i = 0; i < buffer.length; i += 0x20) {
+ 227 |     |             bytes32 chunk = _unsafeReadBytesOffset(buffer, i);
+ 228 |     |             if (chunk != bytes32(0)) {
+ 229 |     |                 return Math.min(8 * i + Math.clz(uint256(chunk)), 8 * buffer.length);
+ 230 |     |             }
+ 231 |     |         }
+ 232 |     |         return 8 * buffer.length;
+ 233 |     |     }
+ 234 |     | 
+ 235 |     |     /**
+ 236 |     |      * @dev Reads a bytes32 from a bytes array without bounds checking.
+ 237 |     |      *
+ 238 |     |      * NOTE: making this function internal would mean it could be used with memory unsafe offset, and marking the
+ 239 |     |      * assembly block as such would prevent some optimizations.
+ 240 |     |      */
+ 241 |     |     function _unsafeReadBytesOffset(bytes memory buffer, uint256 offset) private pure returns (bytes32 value) {
+ 242 |     |         // This is not memory safe in the general case, but all calls to this private function are within bounds.
+ 243 |     |         assembly ("memory-safe") {
+ 244 |     |             value := mload(add(add(buffer, 0x20), offset))
+ 245 |     |         }
+ 246 |     |     }
+ 247 |     | }
+ 248 |     | 
+
+/var/home/robTheBob/gits/sec_proj/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/Panic.sol
+  1 |     | // SPDX-License-Identifier: MIT
+  2 |     | // OpenZeppelin Contracts (last updated v5.1.0) (utils/Panic.sol)
+  3 |     | 
+  4 |     | pragma solidity ^0.8.20;
+  5 |     | 
+  6 |     | /**
+  7 |     |  * @dev Helper library for emitting standardized panic codes.
+  8 |     |  *
+  9 |     |  * ```solidity
+ 10 |     |  * contract Example {
+ 11 |     |  *      using Panic for uint256;
+ 12 |     |  *
+ 13 |     |  *      // Use any of the declared internal constants
+ 14 |     |  *      function foo() { Panic.GENERIC.panic(); }
+ 15 |     |  *
+ 16 |     |  *      // Alternatively
+ 17 |     |  *      function foo() { Panic.panic(Panic.GENERIC); }
+ 18 |     |  * }
+ 19 |     |  * ```
+ 20 |     |  *
+ 21 |     |  * Follows the list from https://github.com/ethereum/solidity/blob/v0.8.24/libsolutil/ErrorCodes.h[libsolutil].
+ 22 |     |  *
+ 23 |     |  * _Available since v5.1._
+ 24 |     |  */
+ 25 |     | // slither-disable-next-line unused-state
+ 26 |     | library Panic {
+ 27 |     |     /// @dev generic / unspecified error
+ 28 |     |     uint256 internal constant GENERIC = 0x00;
+ 29 |     |     /// @dev used by the assert() builtin
+ 30 |     |     uint256 internal constant ASSERT = 0x01;
+ 31 |     |     /// @dev arithmetic underflow or overflow
+ 32 |     |     uint256 internal constant UNDER_OVERFLOW = 0x11;
+ 33 |     |     /// @dev division or modulo by zero
+ 34 |     |     uint256 internal constant DIVISION_BY_ZERO = 0x12;
+ 35 |     |     /// @dev enum conversion error
+ 36 |     |     uint256 internal constant ENUM_CONVERSION_ERROR = 0x21;
+ 37 |     |     /// @dev invalid encoding in storage
+ 38 |     |     uint256 internal constant STORAGE_ENCODING_ERROR = 0x22;
+ 39 |     |     /// @dev empty array pop
+ 40 |     |     uint256 internal constant EMPTY_ARRAY_POP = 0x31;
+ 41 |     |     /// @dev array out of bounds access
+ 42 |     |     uint256 internal constant ARRAY_OUT_OF_BOUNDS = 0x32;
+ 43 |     |     /// @dev resource error (too large allocation or too large array)
+ 44 |     |     uint256 internal constant RESOURCE_ERROR = 0x41;
+ 45 |     |     /// @dev calling invalid internal function
+ 46 |     |     uint256 internal constant INVALID_INTERNAL_FUNCTION = 0x51;
+ 47 |     | 
+ 48 |     |     /// @dev Reverts with a panic code. Recommended to use with
+ 49 |     |     /// the internal constants with predefined codes.
+ 50 |     |     function panic(uint256 code) internal pure {
+ 51 |     |         assembly ("memory-safe") {
+ 52 |     |             mstore(0x00, 0x4e487b71)
+ 53 |     |             mstore(0x20, code)
+ 54 |     |             revert(0x1c, 0x24)
+ 55 |     |         }
+ 56 |     |     }
+ 57 |     | }
+ 58 |     | 
+
+/var/home/robTheBob/gits/sec_proj/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/Strings.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | // OpenZeppelin Contracts (last updated v5.5.0) (utils/Strings.sol)
+   3 |     | 
+   4 |     | pragma solidity ^0.8.24;
+   5 |     | 
+   6 |     | import {Math} from "./math/Math.sol";
+   7 |     | import {SafeCast} from "./math/SafeCast.sol";
+   8 |     | import {SignedMath} from "./math/SignedMath.sol";
+   9 |     | import {Bytes} from "./Bytes.sol";
+  10 |     | 
+  11 |     | /**
+  12 |     |  * @dev String operations.
+  13 |     |  */
+  14 |     | library Strings {
+  15 |     |     using SafeCast for *;
+  16 |     | 
+  17 |     |     bytes16 private constant HEX_DIGITS = "0123456789abcdef";
+  18 |     |     uint8 private constant ADDRESS_LENGTH = 20;
+  19 |     |     uint256 private constant SPECIAL_CHARS_LOOKUP =
+  20 |     |         (1 << 0x08) | // backspace
+  21 |     |             (1 << 0x09) | // tab
+  22 |     |             (1 << 0x0a) | // newline
+  23 |     |             (1 << 0x0c) | // form feed
+  24 |     |             (1 << 0x0d) | // carriage return
+  25 |     |             (1 << 0x22) | // double quote
+  26 |     |             (1 << 0x5c); // backslash
+  27 |     | 
+  28 |     |     /**
+  29 |     |      * @dev The `value` string doesn't fit in the specified `length`.
+  30 |     |      */
+  31 |     |     error StringsInsufficientHexLength(uint256 value, uint256 length);
+  32 |     | 
+  33 |     |     /**
+  34 |     |      * @dev The string being parsed contains characters that are not in scope of the given base.
+  35 |     |      */
+  36 |     |     error StringsInvalidChar();
+  37 |     | 
+  38 |     |     /**
+  39 |     |      * @dev The string being parsed is not a properly formatted address.
+  40 |     |      */
+  41 |     |     error StringsInvalidAddressFormat();
+  42 |     | 
+  43 |     |     /**
+  44 |     |      * @dev Converts a `uint256` to its ASCII `string` decimal representation.
+  45 |     |      */
+  46 | *   |     function toString(uint256 value) internal pure returns (string memory) {
+  47 |     |         unchecked {
+  48 | *   |             uint256 length = Math.log10(value) + 1;
+  49 | *   |             string memory buffer = new string(length);
+  50 | *   |             uint256 ptr;
+  51 |     |             assembly ("memory-safe") {
+  52 | *   |                 ptr := add(add(buffer, 0x20), length)
+  53 |     |             }
+  54 | *   |             while (true) {
+  55 | *   |                 ptr--;
+  56 |     |                 assembly ("memory-safe") {
+  57 | *   |                     mstore8(ptr, byte(mod(value, 10), HEX_DIGITS))
+  58 |     |                 }
+  59 | *   |                 value /= 10;
+  60 | *   |                 if (value == 0) break;
+  61 |     |             }
+  62 | *   |             return buffer;
+  63 |     |         }
+  64 |     |     }
+  65 |     | 
+  66 |     |     /**
+  67 |     |      * @dev Converts a `int256` to its ASCII `string` decimal representation.
+  68 |     |      */
+  69 |     |     function toStringSigned(int256 value) internal pure returns (string memory) {
+  70 |     |         return string.concat(value < 0 ? "-" : "", toString(SignedMath.abs(value)));
+  71 |     |     }
+  72 |     | 
+  73 |     |     /**
+  74 |     |      * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation.
+  75 |     |      */
+  76 |     |     function toHexString(uint256 value) internal pure returns (string memory) {
+  77 |     |         unchecked {
+  78 |     |             return toHexString(value, Math.log256(value) + 1);
+  79 |     |         }
+  80 |     |     }
+  81 |     | 
+  82 |     |     /**
+  83 |     |      * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length.
+  84 |     |      */
+  85 |     |     function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+  86 |     |         uint256 localValue = value;
+  87 |     |         bytes memory buffer = new bytes(2 * length + 2);
+  88 |     |         buffer[0] = "0";
+  89 |     |         buffer[1] = "x";
+  90 |     |         for (uint256 i = 2 * length + 1; i > 1; --i) {
+  91 |     |             buffer[i] = HEX_DIGITS[localValue & 0xf];
+  92 |     |             localValue >>= 4;
+  93 |     |         }
+  94 |     |         if (localValue != 0) {
+  95 |     |             revert StringsInsufficientHexLength(value, length);
+  96 |     |         }
+  97 |     |         return string(buffer);
+  98 |     |     }
+  99 |     | 
+ 100 |     |     /**
+ 101 |     |      * @dev Converts an `address` with fixed length of 20 bytes to its not checksummed ASCII `string` hexadecimal
+ 102 |     |      * representation.
+ 103 |     |      */
+ 104 |     |     function toHexString(address addr) internal pure returns (string memory) {
+ 105 |     |         return toHexString(uint256(uint160(addr)), ADDRESS_LENGTH);
+ 106 |     |     }
+ 107 |     | 
+ 108 |     |     /**
+ 109 |     |      * @dev Converts an `address` with fixed length of 20 bytes to its checksummed ASCII `string` hexadecimal
+ 110 |     |      * representation, according to EIP-55.
+ 111 |     |      */
+ 112 |     |     function toChecksumHexString(address addr) internal pure returns (string memory) {
+ 113 |     |         bytes memory buffer = bytes(toHexString(addr));
+ 114 |     | 
+ 115 |     |         // hash the hex part of buffer (skip length + 2 bytes, length 40)
+ 116 |     |         uint256 hashValue;
+ 117 |     |         assembly ("memory-safe") {
+ 118 |     |             hashValue := shr(96, keccak256(add(buffer, 0x22), 40))
+ 119 |     |         }
+ 120 |     | 
+ 121 |     |         for (uint256 i = 41; i > 1; --i) {
+ 122 |     |             // possible values for buffer[i] are 48 (0) to 57 (9) and 97 (a) to 102 (f)
+ 123 |     |             if (hashValue & 0xf > 7 && uint8(buffer[i]) > 96) {
+ 124 |     |                 // case shift by xoring with 0x20
+ 125 |     |                 buffer[i] ^= 0x20;
+ 126 |     |             }
+ 127 |     |             hashValue >>= 4;
+ 128 |     |         }
+ 129 |     |         return string(buffer);
+ 130 |     |     }
+ 131 |     | 
+ 132 |     |     /**
+ 133 |     |      * @dev Converts a `bytes` buffer to its ASCII `string` hexadecimal representation.
+ 134 |     |      */
+ 135 |     |     function toHexString(bytes memory input) internal pure returns (string memory) {
+ 136 |     |         unchecked {
+ 137 |     |             bytes memory buffer = new bytes(2 * input.length + 2);
+ 138 |     |             buffer[0] = "0";
+ 139 |     |             buffer[1] = "x";
+ 140 |     |             for (uint256 i = 0; i < input.length; ++i) {
+ 141 |     |                 uint8 v = uint8(input[i]);
+ 142 |     |                 buffer[2 * i + 2] = HEX_DIGITS[v >> 4];
+ 143 |     |                 buffer[2 * i + 3] = HEX_DIGITS[v & 0xf];
+ 144 |     |             }
+ 145 |     |             return string(buffer);
+ 146 |     |         }
+ 147 |     |     }
+ 148 |     | 
+ 149 |     |     /**
+ 150 |     |      * @dev Returns true if the two strings are equal.
+ 151 |     |      */
+ 152 |     |     function equal(string memory a, string memory b) internal pure returns (bool) {
+ 153 |     |         return Bytes.equal(bytes(a), bytes(b));
+ 154 |     |     }
+ 155 |     | 
+ 156 |     |     /**
+ 157 |     |      * @dev Parse a decimal string and returns the value as a `uint256`.
+ 158 |     |      *
+ 159 |     |      * Requirements:
+ 160 |     |      * - The string must be formatted as `[0-9]*`
+ 161 |     |      * - The result must fit into an `uint256` type
+ 162 |     |      */
+ 163 |     |     function parseUint(string memory input) internal pure returns (uint256) {
+ 164 |     |         return parseUint(input, 0, bytes(input).length);
+ 165 |     |     }
+ 166 |     | 
+ 167 |     |     /**
+ 168 |     |      * @dev Variant of {parseUint-string} that parses a substring of `input` located between position `begin` (included) and
+ 169 |     |      * `end` (excluded).
+ 170 |     |      *
+ 171 |     |      * Requirements:
+ 172 |     |      * - The substring must be formatted as `[0-9]*`
+ 173 |     |      * - The result must fit into an `uint256` type
+ 174 |     |      */
+ 175 |     |     function parseUint(string memory input, uint256 begin, uint256 end) internal pure returns (uint256) {
+ 176 |     |         (bool success, uint256 value) = tryParseUint(input, begin, end);
+ 177 |     |         if (!success) revert StringsInvalidChar();
+ 178 |     |         return value;
+ 179 |     |     }
+ 180 |     | 
+ 181 |     |     /**
+ 182 |     |      * @dev Variant of {parseUint-string} that returns false if the parsing fails because of an invalid character.
+ 183 |     |      *
+ 184 |     |      * NOTE: This function will revert if the result does not fit in a `uint256`.
+ 185 |     |      */
+ 186 |     |     function tryParseUint(string memory input) internal pure returns (bool success, uint256 value) {
+ 187 |     |         return _tryParseUintUncheckedBounds(input, 0, bytes(input).length);
+ 188 |     |     }
+ 189 |     | 
+ 190 |     |     /**
+ 191 |     |      * @dev Variant of {parseUint-string-uint256-uint256} that returns false if the parsing fails because of an invalid
+ 192 |     |      * character.
+ 193 |     |      *
+ 194 |     |      * NOTE: This function will revert if the result does not fit in a `uint256`.
+ 195 |     |      */
+ 196 |     |     function tryParseUint(
+ 197 |     |         string memory input,
+ 198 |     |         uint256 begin,
+ 199 |     |         uint256 end
+ 200 |     |     ) internal pure returns (bool success, uint256 value) {
+ 201 |     |         if (end > bytes(input).length || begin > end) return (false, 0);
+ 202 |     |         return _tryParseUintUncheckedBounds(input, begin, end);
+ 203 |     |     }
+ 204 |     | 
+ 205 |     |     /**
+ 206 |     |      * @dev Implementation of {tryParseUint-string-uint256-uint256} that does not check bounds. Caller should make sure that
+ 207 |     |      * `begin <= end <= input.length`. Other inputs would result in undefined behavior.
+ 208 |     |      */
+ 209 |     |     function _tryParseUintUncheckedBounds(
+ 210 |     |         string memory input,
+ 211 |     |         uint256 begin,
+ 212 |     |         uint256 end
+ 213 |     |     ) private pure returns (bool success, uint256 value) {
+ 214 |     |         bytes memory buffer = bytes(input);
+ 215 |     | 
+ 216 |     |         uint256 result = 0;
+ 217 |     |         for (uint256 i = begin; i < end; ++i) {
+ 218 |     |             uint8 chr = _tryParseChr(bytes1(_unsafeReadBytesOffset(buffer, i)));
+ 219 |     |             if (chr > 9) return (false, 0);
+ 220 |     |             result *= 10;
+ 221 |     |             result += chr;
+ 222 |     |         }
+ 223 |     |         return (true, result);
+ 224 |     |     }
+ 225 |     | 
+ 226 |     |     /**
+ 227 |     |      * @dev Parse a decimal string and returns the value as a `int256`.
+ 228 |     |      *
+ 229 |     |      * Requirements:
+ 230 |     |      * - The string must be formatted as `[-+]?[0-9]*`
+ 231 |     |      * - The result must fit in an `int256` type.
+ 232 |     |      */
+ 233 |     |     function parseInt(string memory input) internal pure returns (int256) {
+ 234 |     |         return parseInt(input, 0, bytes(input).length);
+ 235 |     |     }
+ 236 |     | 
+ 237 |     |     /**
+ 238 |     |      * @dev Variant of {parseInt-string} that parses a substring of `input` located between position `begin` (included) and
+ 239 |     |      * `end` (excluded).
+ 240 |     |      *
+ 241 |     |      * Requirements:
+ 242 |     |      * - The substring must be formatted as `[-+]?[0-9]*`
+ 243 |     |      * - The result must fit in an `int256` type.
+ 244 |     |      */
+ 245 |     |     function parseInt(string memory input, uint256 begin, uint256 end) internal pure returns (int256) {
+ 246 |     |         (bool success, int256 value) = tryParseInt(input, begin, end);
+ 247 |     |         if (!success) revert StringsInvalidChar();
+ 248 |     |         return value;
+ 249 |     |     }
+ 250 |     | 
+ 251 |     |     /**
+ 252 |     |      * @dev Variant of {parseInt-string} that returns false if the parsing fails because of an invalid character or if
+ 253 |     |      * the result does not fit in a `int256`.
+ 254 |     |      *
+ 255 |     |      * NOTE: This function will revert if the absolute value of the result does not fit in a `uint256`.
+ 256 |     |      */
+ 257 |     |     function tryParseInt(string memory input) internal pure returns (bool success, int256 value) {
+ 258 |     |         return _tryParseIntUncheckedBounds(input, 0, bytes(input).length);
+ 259 |     |     }
+ 260 |     | 
+ 261 |     |     uint256 private constant ABS_MIN_INT256 = 2 ** 255;
+ 262 |     | 
+ 263 |     |     /**
+ 264 |     |      * @dev Variant of {parseInt-string-uint256-uint256} that returns false if the parsing fails because of an invalid
+ 265 |     |      * character or if the result does not fit in a `int256`.
+ 266 |     |      *
+ 267 |     |      * NOTE: This function will revert if the absolute value of the result does not fit in a `uint256`.
+ 268 |     |      */
+ 269 |     |     function tryParseInt(
+ 270 |     |         string memory input,
+ 271 |     |         uint256 begin,
+ 272 |     |         uint256 end
+ 273 |     |     ) internal pure returns (bool success, int256 value) {
+ 274 |     |         if (end > bytes(input).length || begin > end) return (false, 0);
+ 275 |     |         return _tryParseIntUncheckedBounds(input, begin, end);
+ 276 |     |     }
+ 277 |     | 
+ 278 |     |     /**
+ 279 |     |      * @dev Implementation of {tryParseInt-string-uint256-uint256} that does not check bounds. Caller should make sure that
+ 280 |     |      * `begin <= end <= input.length`. Other inputs would result in undefined behavior.
+ 281 |     |      */
+ 282 |     |     function _tryParseIntUncheckedBounds(
+ 283 |     |         string memory input,
+ 284 |     |         uint256 begin,
+ 285 |     |         uint256 end
+ 286 |     |     ) private pure returns (bool success, int256 value) {
+ 287 |     |         bytes memory buffer = bytes(input);
+ 288 |     | 
+ 289 |     |         // Check presence of a negative sign.
+ 290 |     |         bytes1 sign = begin == end ? bytes1(0) : bytes1(_unsafeReadBytesOffset(buffer, begin)); // don't do out-of-bound (possibly unsafe) read if sub-string is empty
+ 291 |     |         bool positiveSign = sign == bytes1("+");
+ 292 |     |         bool negativeSign = sign == bytes1("-");
+ 293 |     |         uint256 offset = (positiveSign || negativeSign).toUint();
+ 294 |     | 
+ 295 |     |         (bool absSuccess, uint256 absValue) = tryParseUint(input, begin + offset, end);
+ 296 |     | 
+ 297 |     |         if (absSuccess && absValue < ABS_MIN_INT256) {
+ 298 |     |             return (true, negativeSign ? -int256(absValue) : int256(absValue));
+ 299 |     |         } else if (absSuccess && negativeSign && absValue == ABS_MIN_INT256) {
+ 300 |     |             return (true, type(int256).min);
+ 301 |     |         } else return (false, 0);
+ 302 |     |     }
+ 303 |     | 
+ 304 |     |     /**
+ 305 |     |      * @dev Parse a hexadecimal string (with or without "0x" prefix), and returns the value as a `uint256`.
+ 306 |     |      *
+ 307 |     |      * Requirements:
+ 308 |     |      * - The string must be formatted as `(0x)?[0-9a-fA-F]*`
+ 309 |     |      * - The result must fit in an `uint256` type.
+ 310 |     |      */
+ 311 |     |     function parseHexUint(string memory input) internal pure returns (uint256) {
+ 312 |     |         return parseHexUint(input, 0, bytes(input).length);
+ 313 |     |     }
+ 314 |     | 
+ 315 |     |     /**
+ 316 |     |      * @dev Variant of {parseHexUint-string} that parses a substring of `input` located between position `begin` (included) and
+ 317 |     |      * `end` (excluded).
+ 318 |     |      *
+ 319 |     |      * Requirements:
+ 320 |     |      * - The substring must be formatted as `(0x)?[0-9a-fA-F]*`
+ 321 |     |      * - The result must fit in an `uint256` type.
+ 322 |     |      */
+ 323 |     |     function parseHexUint(string memory input, uint256 begin, uint256 end) internal pure returns (uint256) {
+ 324 |     |         (bool success, uint256 value) = tryParseHexUint(input, begin, end);
+ 325 |     |         if (!success) revert StringsInvalidChar();
+ 326 |     |         return value;
+ 327 |     |     }
+ 328 |     | 
+ 329 |     |     /**
+ 330 |     |      * @dev Variant of {parseHexUint-string} that returns false if the parsing fails because of an invalid character.
+ 331 |     |      *
+ 332 |     |      * NOTE: This function will revert if the result does not fit in a `uint256`.
+ 333 |     |      */
+ 334 |     |     function tryParseHexUint(string memory input) internal pure returns (bool success, uint256 value) {
+ 335 |     |         return _tryParseHexUintUncheckedBounds(input, 0, bytes(input).length);
+ 336 |     |     }
+ 337 |     | 
+ 338 |     |     /**
+ 339 |     |      * @dev Variant of {parseHexUint-string-uint256-uint256} that returns false if the parsing fails because of an
+ 340 |     |      * invalid character.
+ 341 |     |      *
+ 342 |     |      * NOTE: This function will revert if the result does not fit in a `uint256`.
+ 343 |     |      */
+ 344 |     |     function tryParseHexUint(
+ 345 |     |         string memory input,
+ 346 |     |         uint256 begin,
+ 347 |     |         uint256 end
+ 348 |     |     ) internal pure returns (bool success, uint256 value) {
+ 349 |     |         if (end > bytes(input).length || begin > end) return (false, 0);
+ 350 |     |         return _tryParseHexUintUncheckedBounds(input, begin, end);
+ 351 |     |     }
+ 352 |     | 
+ 353 |     |     /**
+ 354 |     |      * @dev Implementation of {tryParseHexUint-string-uint256-uint256} that does not check bounds. Caller should make sure that
+ 355 |     |      * `begin <= end <= input.length`. Other inputs would result in undefined behavior.
+ 356 |     |      */
+ 357 |     |     function _tryParseHexUintUncheckedBounds(
+ 358 |     |         string memory input,
+ 359 |     |         uint256 begin,
+ 360 |     |         uint256 end
+ 361 |     |     ) private pure returns (bool success, uint256 value) {
+ 362 |     |         bytes memory buffer = bytes(input);
+ 363 |     | 
+ 364 |     |         // skip 0x prefix if present
+ 365 |     |         bool hasPrefix = (end > begin + 1) && bytes2(_unsafeReadBytesOffset(buffer, begin)) == bytes2("0x"); // don't do out-of-bound (possibly unsafe) read if sub-string is empty
+ 366 |     |         uint256 offset = hasPrefix.toUint() * 2;
+ 367 |     | 
+ 368 |     |         uint256 result = 0;
+ 369 |     |         for (uint256 i = begin + offset; i < end; ++i) {
+ 370 |     |             uint8 chr = _tryParseChr(bytes1(_unsafeReadBytesOffset(buffer, i)));
+ 371 |     |             if (chr > 15) return (false, 0);
+ 372 |     |             result *= 16;
+ 373 |     |             unchecked {
+ 374 |     |                 // Multiplying by 16 is equivalent to a shift of 4 bits (with additional overflow check).
+ 375 |     |                 // This guarantees that adding a value < 16 will not cause an overflow, hence the unchecked.
+ 376 |     |                 result += chr;
+ 377 |     |             }
+ 378 |     |         }
+ 379 |     |         return (true, result);
+ 380 |     |     }
+ 381 |     | 
+ 382 |     |     /**
+ 383 |     |      * @dev Parse a hexadecimal string (with or without "0x" prefix), and returns the value as an `address`.
+ 384 |     |      *
+ 385 |     |      * Requirements:
+ 386 |     |      * - The string must be formatted as `(0x)?[0-9a-fA-F]{40}`
+ 387 |     |      */
+ 388 |     |     function parseAddress(string memory input) internal pure returns (address) {
+ 389 |     |         return parseAddress(input, 0, bytes(input).length);
+ 390 |     |     }
+ 391 |     | 
+ 392 |     |     /**
+ 393 |     |      * @dev Variant of {parseAddress-string} that parses a substring of `input` located between position `begin` (included) and
+ 394 |     |      * `end` (excluded).
+ 395 |     |      *
+ 396 |     |      * Requirements:
+ 397 |     |      * - The substring must be formatted as `(0x)?[0-9a-fA-F]{40}`
+ 398 |     |      */
+ 399 |     |     function parseAddress(string memory input, uint256 begin, uint256 end) internal pure returns (address) {
+ 400 |     |         (bool success, address value) = tryParseAddress(input, begin, end);
+ 401 |     |         if (!success) revert StringsInvalidAddressFormat();
+ 402 |     |         return value;
+ 403 |     |     }
+ 404 |     | 
+ 405 |     |     /**
+ 406 |     |      * @dev Variant of {parseAddress-string} that returns false if the parsing fails because the input is not a properly
+ 407 |     |      * formatted address. See {parseAddress-string} requirements.
+ 408 |     |      */
+ 409 |     |     function tryParseAddress(string memory input) internal pure returns (bool success, address value) {
+ 410 |     |         return tryParseAddress(input, 0, bytes(input).length);
+ 411 |     |     }
+ 412 |     | 
+ 413 |     |     /**
+ 414 |     |      * @dev Variant of {parseAddress-string-uint256-uint256} that returns false if the parsing fails because input is not a properly
+ 415 |     |      * formatted address. See {parseAddress-string-uint256-uint256} requirements.
+ 416 |     |      */
+ 417 |     |     function tryParseAddress(
+ 418 |     |         string memory input,
+ 419 |     |         uint256 begin,
+ 420 |     |         uint256 end
+ 421 |     |     ) internal pure returns (bool success, address value) {
+ 422 |     |         if (end > bytes(input).length || begin > end) return (false, address(0));
+ 423 |     | 
+ 424 |     |         bool hasPrefix = (end > begin + 1) && bytes2(_unsafeReadBytesOffset(bytes(input), begin)) == bytes2("0x"); // don't do out-of-bound (possibly unsafe) read if sub-string is empty
+ 425 |     |         uint256 expectedLength = 40 + hasPrefix.toUint() * 2;
+ 426 |     | 
+ 427 |     |         // check that input is the correct length
+ 428 |     |         if (end - begin == expectedLength) {
+ 429 |     |             // length guarantees that this does not overflow, and value is at most type(uint160).max
+ 430 |     |             (bool s, uint256 v) = _tryParseHexUintUncheckedBounds(input, begin, end);
+ 431 |     |             return (s, address(uint160(v)));
+ 432 |     |         } else {
+ 433 |     |             return (false, address(0));
+ 434 |     |         }
+ 435 |     |     }
+ 436 |     | 
+ 437 |     |     function _tryParseChr(bytes1 chr) private pure returns (uint8) {
+ 438 |     |         uint8 value = uint8(chr);
+ 439 |     | 
+ 440 |     |         // Try to parse `chr`:
+ 441 |     |         // - Case 1: [0-9]
+ 442 |     |         // - Case 2: [a-f]
+ 443 |     |         // - Case 3: [A-F]
+ 444 |     |         // - otherwise not supported
+ 445 |     |         unchecked {
+ 446 |     |             if (value > 47 && value < 58) value -= 48;
+ 447 |     |             else if (value > 96 && value < 103) value -= 87;
+ 448 |     |             else if (value > 64 && value < 71) value -= 55;
+ 449 |     |             else return type(uint8).max;
+ 450 |     |         }
+ 451 |     | 
+ 452 |     |         return value;
+ 453 |     |     }
+ 454 |     | 
+ 455 |     |     /**
+ 456 |     |      * @dev Escape special characters in JSON strings. This can be useful to prevent JSON injection in NFT metadata.
+ 457 |     |      *
+ 458 |     |      * WARNING: This function should only be used in double quoted JSON strings. Single quotes are not escaped.
+ 459 |     |      *
+ 460 |     |      * NOTE: This function escapes all unicode characters, and not just the ones in ranges defined in section 2.5 of
+ 461 |     |      * RFC-4627 (U+0000 to U+001F, U+0022 and U+005C). ECMAScript's `JSON.parse` does recover escaped unicode
+ 462 |     |      * characters that are not in this range, but other tooling may provide different results.
+ 463 |     |      */
+ 464 |     |     function escapeJSON(string memory input) internal pure returns (string memory) {
+ 465 |     |         bytes memory buffer = bytes(input);
+ 466 |     |         bytes memory output = new bytes(2 * buffer.length); // worst case scenario
+ 467 |     |         uint256 outputLength = 0;
+ 468 |     | 
+ 469 |     |         for (uint256 i = 0; i < buffer.length; ++i) {
+ 470 |     |             bytes1 char = bytes1(_unsafeReadBytesOffset(buffer, i));
+ 471 |     |             if (((SPECIAL_CHARS_LOOKUP & (1 << uint8(char))) != 0)) {
+ 472 |     |                 output[outputLength++] = "\\";
+ 473 |     |                 if (char == 0x08) output[outputLength++] = "b";
+ 474 |     |                 else if (char == 0x09) output[outputLength++] = "t";
+ 475 |     |                 else if (char == 0x0a) output[outputLength++] = "n";
+ 476 |     |                 else if (char == 0x0c) output[outputLength++] = "f";
+ 477 |     |                 else if (char == 0x0d) output[outputLength++] = "r";
+ 478 |     |                 else if (char == 0x5c) output[outputLength++] = "\\";
+ 479 |     |                 else if (char == 0x22) {
+ 480 |     |                     // solhint-disable-next-line quotes
+ 481 |     |                     output[outputLength++] = '"';
+ 482 |     |                 }
+ 483 |     |             } else {
+ 484 |     |                 output[outputLength++] = char;
+ 485 |     |             }
+ 486 |     |         }
+ 487 |     |         // write the actual length and deallocate unused memory
+ 488 |     |         assembly ("memory-safe") {
+ 489 |     |             mstore(output, outputLength)
+ 490 |     |             mstore(0x40, add(output, shl(5, shr(5, add(outputLength, 63)))))
+ 491 |     |         }
+ 492 |     | 
+ 493 |     |         return string(output);
+ 494 |     |     }
+ 495 |     | 
+ 496 |     |     /**
+ 497 |     |      * @dev Reads a bytes32 from a bytes array without bounds checking.
+ 498 |     |      *
+ 499 |     |      * NOTE: making this function internal would mean it could be used with memory unsafe offset, and marking the
+ 500 |     |      * assembly block as such would prevent some optimizations.
+ 501 |     |      */
+ 502 |     |     function _unsafeReadBytesOffset(bytes memory buffer, uint256 offset) private pure returns (bytes32 value) {
+ 503 |     |         // This is not memory safe in the general case, but all calls to this private function are within bounds.
+ 504 |     |         assembly ("memory-safe") {
+ 505 |     |             value := mload(add(add(buffer, 0x20), offset))
+ 506 |     |         }
+ 507 |     |     }
+ 508 |     | }
+ 509 |     | 
+
+/var/home/robTheBob/gits/sec_proj/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/math/Math.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | // OpenZeppelin Contracts (last updated v5.5.0) (utils/math/Math.sol)
+   3 |     | 
+   4 |     | pragma solidity ^0.8.20;
+   5 |     | 
+   6 |     | import {Panic} from "../Panic.sol";
+   7 |     | import {SafeCast} from "./SafeCast.sol";
+   8 |     | 
+   9 |     | /**
+  10 |     |  * @dev Standard math utilities missing in the Solidity language.
+  11 |     |  */
+  12 |     | library Math {
+  13 |     |     enum Rounding {
+  14 |     |         Floor, // Toward negative infinity
+  15 |     |         Ceil, // Toward positive infinity
+  16 |     |         Trunc, // Toward zero
+  17 |     |         Expand // Away from zero
+  18 |     |     }
+  19 |     | 
+  20 |     |     /**
+  21 |     |      * @dev Return the 512-bit addition of two uint256.
+  22 |     |      *
+  23 |     |      * The result is stored in two 256 variables such that sum = high * 2²⁵⁶ + low.
+  24 |     |      */
+  25 |     |     function add512(uint256 a, uint256 b) internal pure returns (uint256 high, uint256 low) {
+  26 |     |         assembly ("memory-safe") {
+  27 |     |             low := add(a, b)
+  28 |     |             high := lt(low, a)
+  29 |     |         }
+  30 |     |     }
+  31 |     | 
+  32 |     |     /**
+  33 |     |      * @dev Return the 512-bit multiplication of two uint256.
+  34 |     |      *
+  35 |     |      * The result is stored in two 256 variables such that product = high * 2²⁵⁶ + low.
+  36 |     |      */
+  37 |     |     function mul512(uint256 a, uint256 b) internal pure returns (uint256 high, uint256 low) {
+  38 |     |         // 512-bit multiply [high low] = x * y. Compute the product mod 2²⁵⁶ and mod 2²⁵⁶ - 1, then use
+  39 |     |         // the Chinese Remainder Theorem to reconstruct the 512 bit result. The result is stored in two 256
+  40 |     |         // variables such that product = high * 2²⁵⁶ + low.
+  41 |     |         assembly ("memory-safe") {
+  42 |     |             let mm := mulmod(a, b, not(0))
+  43 |     |             low := mul(a, b)
+  44 |     |             high := sub(sub(mm, low), lt(mm, low))
+  45 |     |         }
+  46 |     |     }
+  47 |     | 
+  48 |     |     /**
+  49 |     |      * @dev Returns the addition of two unsigned integers, with a success flag (no overflow).
+  50 |     |      */
+  51 |     |     function tryAdd(uint256 a, uint256 b) internal pure returns (bool success, uint256 result) {
+  52 |     |         unchecked {
+  53 |     |             uint256 c = a + b;
+  54 |     |             success = c >= a;
+  55 |     |             result = c * SafeCast.toUint(success);
+  56 |     |         }
+  57 |     |     }
+  58 |     | 
+  59 |     |     /**
+  60 |     |      * @dev Returns the subtraction of two unsigned integers, with a success flag (no overflow).
+  61 |     |      */
+  62 |     |     function trySub(uint256 a, uint256 b) internal pure returns (bool success, uint256 result) {
+  63 |     |         unchecked {
+  64 |     |             uint256 c = a - b;
+  65 |     |             success = c <= a;
+  66 |     |             result = c * SafeCast.toUint(success);
+  67 |     |         }
+  68 |     |     }
+  69 |     | 
+  70 |     |     /**
+  71 |     |      * @dev Returns the multiplication of two unsigned integers, with a success flag (no overflow).
+  72 |     |      */
+  73 |     |     function tryMul(uint256 a, uint256 b) internal pure returns (bool success, uint256 result) {
+  74 |     |         unchecked {
+  75 |     |             uint256 c = a * b;
+  76 |     |             assembly ("memory-safe") {
+  77 |     |                 // Only true when the multiplication doesn't overflow
+  78 |     |                 // (c / a == b) || (a == 0)
+  79 |     |                 success := or(eq(div(c, a), b), iszero(a))
+  80 |     |             }
+  81 |     |             // equivalent to: success ? c : 0
+  82 |     |             result = c * SafeCast.toUint(success);
+  83 |     |         }
+  84 |     |     }
+  85 |     | 
+  86 |     |     /**
+  87 |     |      * @dev Returns the division of two unsigned integers, with a success flag (no division by zero).
+  88 |     |      */
+  89 |     |     function tryDiv(uint256 a, uint256 b) internal pure returns (bool success, uint256 result) {
+  90 |     |         unchecked {
+  91 |     |             success = b > 0;
+  92 |     |             assembly ("memory-safe") {
+  93 |     |                 // The `DIV` opcode returns zero when the denominator is 0.
+  94 |     |                 result := div(a, b)
+  95 |     |             }
+  96 |     |         }
+  97 |     |     }
+  98 |     | 
+  99 |     |     /**
+ 100 |     |      * @dev Returns the remainder of dividing two unsigned integers, with a success flag (no division by zero).
+ 101 |     |      */
+ 102 |     |     function tryMod(uint256 a, uint256 b) internal pure returns (bool success, uint256 result) {
+ 103 |     |         unchecked {
+ 104 |     |             success = b > 0;
+ 105 |     |             assembly ("memory-safe") {
+ 106 |     |                 // The `MOD` opcode returns zero when the denominator is 0.
+ 107 |     |                 result := mod(a, b)
+ 108 |     |             }
+ 109 |     |         }
+ 110 |     |     }
+ 111 |     | 
+ 112 |     |     /**
+ 113 |     |      * @dev Unsigned saturating addition, bounds to `2²⁵⁶ - 1` instead of overflowing.
+ 114 |     |      */
+ 115 |     |     function saturatingAdd(uint256 a, uint256 b) internal pure returns (uint256) {
+ 116 |     |         (bool success, uint256 result) = tryAdd(a, b);
+ 117 |     |         return ternary(success, result, type(uint256).max);
+ 118 |     |     }
+ 119 |     | 
+ 120 |     |     /**
+ 121 |     |      * @dev Unsigned saturating subtraction, bounds to zero instead of overflowing.
+ 122 |     |      */
+ 123 |     |     function saturatingSub(uint256 a, uint256 b) internal pure returns (uint256) {
+ 124 |     |         (, uint256 result) = trySub(a, b);
+ 125 |     |         return result;
+ 126 |     |     }
+ 127 |     | 
+ 128 |     |     /**
+ 129 |     |      * @dev Unsigned saturating multiplication, bounds to `2²⁵⁶ - 1` instead of overflowing.
+ 130 |     |      */
+ 131 |     |     function saturatingMul(uint256 a, uint256 b) internal pure returns (uint256) {
+ 132 |     |         (bool success, uint256 result) = tryMul(a, b);
+ 133 |     |         return ternary(success, result, type(uint256).max);
+ 134 |     |     }
+ 135 |     | 
+ 136 |     |     /**
+ 137 |     |      * @dev Branchless ternary evaluation for `condition ? a : b`. Gas costs are constant.
+ 138 |     |      *
+ 139 |     |      * IMPORTANT: This function may reduce bytecode size and consume less gas when used standalone.
+ 140 |     |      * However, the compiler may optimize Solidity ternary operations (i.e. `condition ? a : b`) to only compute
+ 141 |     |      * one branch when needed, making this function more expensive.
+ 142 |     |      */
+ 143 |     |     function ternary(bool condition, uint256 a, uint256 b) internal pure returns (uint256) {
+ 144 |     |         unchecked {
+ 145 |     |             // branchless ternary works because:
+ 146 |     |             // b ^ (a ^ b) == a
+ 147 |     |             // b ^ 0 == b
+ 148 |     |             return b ^ ((a ^ b) * SafeCast.toUint(condition));
+ 149 |     |         }
+ 150 |     |     }
+ 151 |     | 
+ 152 |     |     /**
+ 153 |     |      * @dev Returns the largest of two numbers.
+ 154 |     |      */
+ 155 |     |     function max(uint256 a, uint256 b) internal pure returns (uint256) {
+ 156 |     |         return ternary(a > b, a, b);
+ 157 |     |     }
+ 158 |     | 
+ 159 |     |     /**
+ 160 |     |      * @dev Returns the smallest of two numbers.
+ 161 |     |      */
+ 162 |     |     function min(uint256 a, uint256 b) internal pure returns (uint256) {
+ 163 |     |         return ternary(a < b, a, b);
+ 164 |     |     }
+ 165 |     | 
+ 166 |     |     /**
+ 167 |     |      * @dev Returns the average of two numbers. The result is rounded towards
+ 168 |     |      * zero.
+ 169 |     |      */
+ 170 |     |     function average(uint256 a, uint256 b) internal pure returns (uint256) {
+ 171 |     |         // (a + b) / 2 can overflow.
+ 172 |     |         return (a & b) + (a ^ b) / 2;
+ 173 |     |     }
+ 174 |     | 
+ 175 |     |     /**
+ 176 |     |      * @dev Returns the ceiling of the division of two numbers.
+ 177 |     |      *
+ 178 |     |      * This differs from standard division with `/` in that it rounds towards infinity instead
+ 179 |     |      * of rounding towards zero.
+ 180 |     |      */
+ 181 |     |     function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256) {
+ 182 |     |         if (b == 0) {
+ 183 |     |             // Guarantee the same behavior as in a regular Solidity division.
+ 184 |     |             Panic.panic(Panic.DIVISION_BY_ZERO);
+ 185 |     |         }
+ 186 |     | 
+ 187 |     |         // The following calculation ensures accurate ceiling division without overflow.
+ 188 |     |         // Since a is non-zero, (a - 1) / b will not overflow.
+ 189 |     |         // The largest possible result occurs when (a - 1) / b is type(uint256).max,
+ 190 |     |         // but the largest value we can obtain is type(uint256).max - 1, which happens
+ 191 |     |         // when a = type(uint256).max and b = 1.
+ 192 |     |         unchecked {
+ 193 |     |             return SafeCast.toUint(a > 0) * ((a - 1) / b + 1);
+ 194 |     |         }
+ 195 |     |     }
+ 196 |     | 
+ 197 |     |     /**
+ 198 |     |      * @dev Calculates floor(x * y / denominator) with full precision. Throws if result overflows a uint256 or
+ 199 |     |      * denominator == 0.
+ 200 |     |      *
+ 201 |     |      * Original credit to Remco Bloemen under MIT license (https://xn--2-umb.com/21/muldiv) with further edits by
+ 202 |     |      * Uniswap Labs also under MIT license.
+ 203 |     |      */
+ 204 |     |     function mulDiv(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 result) {
+ 205 |     |         unchecked {
+ 206 |     |             (uint256 high, uint256 low) = mul512(x, y);
+ 207 |     | 
+ 208 |     |             // Handle non-overflow cases, 256 by 256 division.
+ 209 |     |             if (high == 0) {
+ 210 |     |                 // Solidity will revert if denominator == 0, unlike the div opcode on its own.
+ 211 |     |                 // The surrounding unchecked block does not change this fact.
+ 212 |     |                 // See https://docs.soliditylang.org/en/latest/control-structures.html#checked-or-unchecked-arithmetic.
+ 213 |     |                 return low / denominator;
+ 214 |     |             }
+ 215 |     | 
+ 216 |     |             // Make sure the result is less than 2²⁵⁶. Also prevents denominator == 0.
+ 217 |     |             if (denominator <= high) {
+ 218 |     |                 Panic.panic(ternary(denominator == 0, Panic.DIVISION_BY_ZERO, Panic.UNDER_OVERFLOW));
+ 219 |     |             }
+ 220 |     | 
+ 221 |     |             ///////////////////////////////////////////////
+ 222 |     |             // 512 by 256 division.
+ 223 |     |             ///////////////////////////////////////////////
+ 224 |     | 
+ 225 |     |             // Make division exact by subtracting the remainder from [high low].
+ 226 |     |             uint256 remainder;
+ 227 |     |             assembly ("memory-safe") {
+ 228 |     |                 // Compute remainder using mulmod.
+ 229 |     |                 remainder := mulmod(x, y, denominator)
+ 230 |     | 
+ 231 |     |                 // Subtract 256 bit number from 512 bit number.
+ 232 |     |                 high := sub(high, gt(remainder, low))
+ 233 |     |                 low := sub(low, remainder)
+ 234 |     |             }
+ 235 |     | 
+ 236 |     |             // Factor powers of two out of denominator and compute largest power of two divisor of denominator.
+ 237 |     |             // Always >= 1. See https://cs.stackexchange.com/q/138556/92363.
+ 238 |     | 
+ 239 |     |             uint256 twos = denominator & (0 - denominator);
+ 240 |     |             assembly ("memory-safe") {
+ 241 |     |                 // Divide denominator by twos.
+ 242 |     |                 denominator := div(denominator, twos)
+ 243 |     | 
+ 244 |     |                 // Divide [high low] by twos.
+ 245 |     |                 low := div(low, twos)
+ 246 |     | 
+ 247 |     |                 // Flip twos such that it is 2²⁵⁶ / twos. If twos is zero, then it becomes one.
+ 248 |     |                 twos := add(div(sub(0, twos), twos), 1)
+ 249 |     |             }
+ 250 |     | 
+ 251 |     |             // Shift in bits from high into low.
+ 252 |     |             low |= high * twos;
+ 253 |     | 
+ 254 |     |             // Invert denominator mod 2²⁵⁶. Now that denominator is an odd number, it has an inverse modulo 2²⁵⁶ such
+ 255 |     |             // that denominator * inv ≡ 1 mod 2²⁵⁶. Compute the inverse by starting with a seed that is correct for
+ 256 |     |             // four bits. That is, denominator * inv ≡ 1 mod 2⁴.
+ 257 |     |             uint256 inverse = (3 * denominator) ^ 2;
+ 258 |     | 
+ 259 |     |             // Use the Newton-Raphson iteration to improve the precision. Thanks to Hensel's lifting lemma, this also
+ 260 |     |             // works in modular arithmetic, doubling the correct bits in each step.
+ 261 |     |             inverse *= 2 - denominator * inverse; // inverse mod 2⁸
+ 262 |     |             inverse *= 2 - denominator * inverse; // inverse mod 2¹⁶
+ 263 |     |             inverse *= 2 - denominator * inverse; // inverse mod 2³²
+ 264 |     |             inverse *= 2 - denominator * inverse; // inverse mod 2⁶⁴
+ 265 |     |             inverse *= 2 - denominator * inverse; // inverse mod 2¹²⁸
+ 266 |     |             inverse *= 2 - denominator * inverse; // inverse mod 2²⁵⁶
+ 267 |     | 
+ 268 |     |             // Because the division is now exact we can divide by multiplying with the modular inverse of denominator.
+ 269 |     |             // This will give us the correct result modulo 2²⁵⁶. Since the preconditions guarantee that the outcome is
+ 270 |     |             // less than 2²⁵⁶, this is the final result. We don't need to compute the high bits of the result and high
+ 271 |     |             // is no longer required.
+ 272 |     |             result = low * inverse;
+ 273 |     |             return result;
+ 274 |     |         }
+ 275 |     |     }
+ 276 |     | 
+ 277 |     |     /**
+ 278 |     |      * @dev Calculates x * y / denominator with full precision, following the selected rounding direction.
+ 279 |     |      */
+ 280 |     |     function mulDiv(uint256 x, uint256 y, uint256 denominator, Rounding rounding) internal pure returns (uint256) {
+ 281 |     |         return mulDiv(x, y, denominator) + SafeCast.toUint(unsignedRoundsUp(rounding) && mulmod(x, y, denominator) > 0);
+ 282 |     |     }
+ 283 |     | 
+ 284 |     |     /**
+ 285 |     |      * @dev Calculates floor(x * y >> n) with full precision. Throws if result overflows a uint256.
+ 286 |     |      */
+ 287 |     |     function mulShr(uint256 x, uint256 y, uint8 n) internal pure returns (uint256 result) {
+ 288 |     |         unchecked {
+ 289 |     |             (uint256 high, uint256 low) = mul512(x, y);
+ 290 |     |             if (high >= 1 << n) {
+ 291 |     |                 Panic.panic(Panic.UNDER_OVERFLOW);
+ 292 |     |             }
+ 293 |     |             return (high << (256 - n)) | (low >> n);
+ 294 |     |         }
+ 295 |     |     }
+ 296 |     | 
+ 297 |     |     /**
+ 298 |     |      * @dev Calculates x * y >> n with full precision, following the selected rounding direction.
+ 299 |     |      */
+ 300 |     |     function mulShr(uint256 x, uint256 y, uint8 n, Rounding rounding) internal pure returns (uint256) {
+ 301 |     |         return mulShr(x, y, n) + SafeCast.toUint(unsignedRoundsUp(rounding) && mulmod(x, y, 1 << n) > 0);
+ 302 |     |     }
+ 303 |     | 
+ 304 |     |     /**
+ 305 |     |      * @dev Calculate the modular multiplicative inverse of a number in Z/nZ.
+ 306 |     |      *
+ 307 |     |      * If n is a prime, then Z/nZ is a field. In that case all elements are inversible, except 0.
+ 308 |     |      * If n is not a prime, then Z/nZ is not a field, and some elements might not be inversible.
+ 309 |     |      *
+ 310 |     |      * If the input value is not inversible, 0 is returned.
+ 311 |     |      *
+ 312 |     |      * NOTE: If you know for sure that n is (big) a prime, it may be cheaper to use Fermat's little theorem and get the
+ 313 |     |      * inverse using `Math.modExp(a, n - 2, n)`. See {invModPrime}.
+ 314 |     |      */
+ 315 |     |     function invMod(uint256 a, uint256 n) internal pure returns (uint256) {
+ 316 |     |         unchecked {
+ 317 |     |             if (n == 0) return 0;
+ 318 |     | 
+ 319 |     |             // The inverse modulo is calculated using the Extended Euclidean Algorithm (iterative version)
+ 320 |     |             // Used to compute integers x and y such that: ax + ny = gcd(a, n).
+ 321 |     |             // When the gcd is 1, then the inverse of a modulo n exists and it's x.
+ 322 |     |             // ax + ny = 1
+ 323 |     |             // ax = 1 + (-y)n
+ 324 |     |             // ax ≡ 1 (mod n) # x is the inverse of a modulo n
+ 325 |     | 
+ 326 |     |             // If the remainder is 0 the gcd is n right away.
+ 327 |     |             uint256 remainder = a % n;
+ 328 |     |             uint256 gcd = n;
+ 329 |     | 
+ 330 |     |             // Therefore the initial coefficients are:
+ 331 |     |             // ax + ny = gcd(a, n) = n
+ 332 |     |             // 0a + 1n = n
+ 333 |     |             int256 x = 0;
+ 334 |     |             int256 y = 1;
+ 335 |     | 
+ 336 |     |             while (remainder != 0) {
+ 337 |     |                 uint256 quotient = gcd / remainder;
+ 338 |     | 
+ 339 |     |                 (gcd, remainder) = (
+ 340 |     |                     // The old remainder is the next gcd to try.
+ 341 |     |                     remainder,
+ 342 |     |                     // Compute the next remainder.
+ 343 |     |                     // Can't overflow given that (a % gcd) * (gcd // (a % gcd)) <= gcd
+ 344 |     |                     // where gcd is at most n (capped to type(uint256).max)
+ 345 |     |                     gcd - remainder * quotient
+ 346 |     |                 );
+ 347 |     | 
+ 348 |     |                 (x, y) = (
+ 349 |     |                     // Increment the coefficient of a.
+ 350 |     |                     y,
+ 351 |     |                     // Decrement the coefficient of n.
+ 352 |     |                     // Can overflow, but the result is casted to uint256 so that the
+ 353 |     |                     // next value of y is "wrapped around" to a value between 0 and n - 1.
+ 354 |     |                     x - y * int256(quotient)
+ 355 |     |                 );
+ 356 |     |             }
+ 357 |     | 
+ 358 |     |             if (gcd != 1) return 0; // No inverse exists.
+ 359 |     |             return ternary(x < 0, n - uint256(-x), uint256(x)); // Wrap the result if it's negative.
+ 360 |     |         }
+ 361 |     |     }
+ 362 |     | 
+ 363 |     |     /**
+ 364 |     |      * @dev Variant of {invMod}. More efficient, but only works if `p` is known to be a prime greater than `2`.
+ 365 |     |      *
+ 366 |     |      * From https://en.wikipedia.org/wiki/Fermat%27s_little_theorem[Fermat's little theorem], we know that if p is
+ 367 |     |      * prime, then `a**(p-1) ≡ 1 mod p`. As a consequence, we have `a * a**(p-2) ≡ 1 mod p`, which means that
+ 368 |     |      * `a**(p-2)` is the modular multiplicative inverse of a in Fp.
+ 369 |     |      *
+ 370 |     |      * NOTE: this function does NOT check that `p` is a prime greater than `2`.
+ 371 |     |      */
+ 372 |     |     function invModPrime(uint256 a, uint256 p) internal view returns (uint256) {
+ 373 |     |         unchecked {
+ 374 |     |             return Math.modExp(a, p - 2, p);
+ 375 |     |         }
+ 376 |     |     }
+ 377 |     | 
+ 378 |     |     /**
+ 379 |     |      * @dev Returns the modular exponentiation of the specified base, exponent and modulus (b ** e % m)
+ 380 |     |      *
+ 381 |     |      * Requirements:
+ 382 |     |      * - modulus can't be zero
+ 383 |     |      * - underlying staticcall to precompile must succeed
+ 384 |     |      *
+ 385 |     |      * IMPORTANT: The result is only valid if the underlying call succeeds. When using this function, make
+ 386 |     |      * sure the chain you're using it on supports the precompiled contract for modular exponentiation
+ 387 |     |      * at address 0x05 as specified in https://eips.ethereum.org/EIPS/eip-198[EIP-198]. Otherwise,
+ 388 |     |      * the underlying function will succeed given the lack of a revert, but the result may be incorrectly
+ 389 |     |      * interpreted as 0.
+ 390 |     |      */
+ 391 |     |     function modExp(uint256 b, uint256 e, uint256 m) internal view returns (uint256) {
+ 392 |     |         (bool success, uint256 result) = tryModExp(b, e, m);
+ 393 |     |         if (!success) {
+ 394 |     |             Panic.panic(Panic.DIVISION_BY_ZERO);
+ 395 |     |         }
+ 396 |     |         return result;
+ 397 |     |     }
+ 398 |     | 
+ 399 |     |     /**
+ 400 |     |      * @dev Returns the modular exponentiation of the specified base, exponent and modulus (b ** e % m).
+ 401 |     |      * It includes a success flag indicating if the operation succeeded. Operation will be marked as failed if trying
+ 402 |     |      * to operate modulo 0 or if the underlying precompile reverted.
+ 403 |     |      *
+ 404 |     |      * IMPORTANT: The result is only valid if the success flag is true. When using this function, make sure the chain
+ 405 |     |      * you're using it on supports the precompiled contract for modular exponentiation at address 0x05 as specified in
+ 406 |     |      * https://eips.ethereum.org/EIPS/eip-198[EIP-198]. Otherwise, the underlying function will succeed given the lack
+ 407 |     |      * of a revert, but the result may be incorrectly interpreted as 0.
+ 408 |     |      */
+ 409 |     |     function tryModExp(uint256 b, uint256 e, uint256 m) internal view returns (bool success, uint256 result) {
+ 410 |     |         if (m == 0) return (false, 0);
+ 411 |     |         assembly ("memory-safe") {
+ 412 |     |             let ptr := mload(0x40)
+ 413 |     |             // | Offset    | Content    | Content (Hex)                                                      |
+ 414 |     |             // |-----------|------------|--------------------------------------------------------------------|
+ 415 |     |             // | 0x00:0x1f | size of b  | 0x0000000000000000000000000000000000000000000000000000000000000020 |
+ 416 |     |             // | 0x20:0x3f | size of e  | 0x0000000000000000000000000000000000000000000000000000000000000020 |
+ 417 |     |             // | 0x40:0x5f | size of m  | 0x0000000000000000000000000000000000000000000000000000000000000020 |
+ 418 |     |             // | 0x60:0x7f | value of b | 0x<.............................................................b> |
+ 419 |     |             // | 0x80:0x9f | value of e | 0x<.............................................................e> |
+ 420 |     |             // | 0xa0:0xbf | value of m | 0x<.............................................................m> |
+ 421 |     |             mstore(ptr, 0x20)
+ 422 |     |             mstore(add(ptr, 0x20), 0x20)
+ 423 |     |             mstore(add(ptr, 0x40), 0x20)
+ 424 |     |             mstore(add(ptr, 0x60), b)
+ 425 |     |             mstore(add(ptr, 0x80), e)
+ 426 |     |             mstore(add(ptr, 0xa0), m)
+ 427 |     | 
+ 428 |     |             // Given the result < m, it's guaranteed to fit in 32 bytes,
+ 429 |     |             // so we can use the memory scratch space located at offset 0.
+ 430 |     |             success := staticcall(gas(), 0x05, ptr, 0xc0, 0x00, 0x20)
+ 431 |     |             result := mload(0x00)
+ 432 |     |         }
+ 433 |     |     }
+ 434 |     | 
+ 435 |     |     /**
+ 436 |     |      * @dev Variant of {modExp} that supports inputs of arbitrary length.
+ 437 |     |      */
+ 438 |     |     function modExp(bytes memory b, bytes memory e, bytes memory m) internal view returns (bytes memory) {
+ 439 |     |         (bool success, bytes memory result) = tryModExp(b, e, m);
+ 440 |     |         if (!success) {
+ 441 |     |             Panic.panic(Panic.DIVISION_BY_ZERO);
+ 442 |     |         }
+ 443 |     |         return result;
+ 444 |     |     }
+ 445 |     | 
+ 446 |     |     /**
+ 447 |     |      * @dev Variant of {tryModExp} that supports inputs of arbitrary length.
+ 448 |     |      */
+ 449 |     |     function tryModExp(
+ 450 |     |         bytes memory b,
+ 451 |     |         bytes memory e,
+ 452 |     |         bytes memory m
+ 453 |     |     ) internal view returns (bool success, bytes memory result) {
+ 454 |     |         if (_zeroBytes(m)) return (false, new bytes(0));
+ 455 |     | 
+ 456 |     |         uint256 mLen = m.length;
+ 457 |     | 
+ 458 |     |         // Encode call args in result and move the free memory pointer
+ 459 |     |         result = abi.encodePacked(b.length, e.length, mLen, b, e, m);
+ 460 |     | 
+ 461 |     |         assembly ("memory-safe") {
+ 462 |     |             let dataPtr := add(result, 0x20)
+ 463 |     |             // Write result on top of args to avoid allocating extra memory.
+ 464 |     |             success := staticcall(gas(), 0x05, dataPtr, mload(result), dataPtr, mLen)
+ 465 |     |             // Overwrite the length.
+ 466 |     |             // result.length > returndatasize() is guaranteed because returndatasize() == m.length
+ 467 |     |             mstore(result, mLen)
+ 468 |     |             // Set the memory pointer after the returned data.
+ 469 |     |             mstore(0x40, add(dataPtr, mLen))
+ 470 |     |         }
+ 471 |     |     }
+ 472 |     | 
+ 473 |     |     /**
+ 474 |     |      * @dev Returns whether the provided byte array is zero.
+ 475 |     |      */
+ 476 |     |     function _zeroBytes(bytes memory byteArray) private pure returns (bool) {
+ 477 |     |         for (uint256 i = 0; i < byteArray.length; ++i) {
+ 478 |     |             if (byteArray[i] != 0) {
+ 479 |     |                 return false;
+ 480 |     |             }
+ 481 |     |         }
+ 482 |     |         return true;
+ 483 |     |     }
+ 484 |     | 
+ 485 |     |     /**
+ 486 |     |      * @dev Returns the square root of a number. If the number is not a perfect square, the value is rounded
+ 487 |     |      * towards zero.
+ 488 |     |      *
+ 489 |     |      * This method is based on Newton's method for computing square roots; the algorithm is restricted to only
+ 490 |     |      * using integer operations.
+ 491 |     |      */
+ 492 |     |     function sqrt(uint256 a) internal pure returns (uint256) {
+ 493 |     |         unchecked {
+ 494 |     |             // Take care of easy edge cases when a == 0 or a == 1
+ 495 |     |             if (a <= 1) {
+ 496 |     |                 return a;
+ 497 |     |             }
+ 498 |     | 
+ 499 |     |             // In this function, we use Newton's method to get a root of `f(x) := x² - a`. It involves building a
+ 500 |     |             // sequence x_n that converges toward sqrt(a). For each iteration x_n, we also define the error between
+ 501 |     |             // the current value as `ε_n = | x_n - sqrt(a) |`.
+ 502 |     |             //
+ 503 |     |             // For our first estimation, we consider `e` the smallest power of 2 which is bigger than the square root
+ 504 |     |             // of the target. (i.e. `2**(e-1) ≤ sqrt(a) < 2**e`). We know that `e ≤ 128` because `(2¹²⁸)² = 2²⁵⁶` is
+ 505 |     |             // bigger than any uint256.
+ 506 |     |             //
+ 507 |     |             // By noticing that
+ 508 |     |             // `2**(e-1) ≤ sqrt(a) < 2**e → (2**(e-1))² ≤ a < (2**e)² → 2**(2*e-2) ≤ a < 2**(2*e)`
+ 509 |     |             // we can deduce that `e - 1` is `log2(a) / 2`. We can thus compute `x_n = 2**(e-1)` using a method similar
+ 510 |     |             // to the msb function.
+ 511 |     |             uint256 aa = a;
+ 512 |     |             uint256 xn = 1;
+ 513 |     | 
+ 514 |     |             if (aa >= (1 << 128)) {
+ 515 |     |                 aa >>= 128;
+ 516 |     |                 xn <<= 64;
+ 517 |     |             }
+ 518 |     |             if (aa >= (1 << 64)) {
+ 519 |     |                 aa >>= 64;
+ 520 |     |                 xn <<= 32;
+ 521 |     |             }
+ 522 |     |             if (aa >= (1 << 32)) {
+ 523 |     |                 aa >>= 32;
+ 524 |     |                 xn <<= 16;
+ 525 |     |             }
+ 526 |     |             if (aa >= (1 << 16)) {
+ 527 |     |                 aa >>= 16;
+ 528 |     |                 xn <<= 8;
+ 529 |     |             }
+ 530 |     |             if (aa >= (1 << 8)) {
+ 531 |     |                 aa >>= 8;
+ 532 |     |                 xn <<= 4;
+ 533 |     |             }
+ 534 |     |             if (aa >= (1 << 4)) {
+ 535 |     |                 aa >>= 4;
+ 536 |     |                 xn <<= 2;
+ 537 |     |             }
+ 538 |     |             if (aa >= (1 << 2)) {
+ 539 |     |                 xn <<= 1;
+ 540 |     |             }
+ 541 |     | 
+ 542 |     |             // We now have x_n such that `x_n = 2**(e-1) ≤ sqrt(a) < 2**e = 2 * x_n`. This implies ε_n ≤ 2**(e-1).
+ 543 |     |             //
+ 544 |     |             // We can refine our estimation by noticing that the middle of that interval minimizes the error.
+ 545 |     |             // If we move x_n to equal 2**(e-1) + 2**(e-2), then we reduce the error to ε_n ≤ 2**(e-2).
+ 546 |     |             // This is going to be our x_0 (and ε_0)
+ 547 |     |             xn = (3 * xn) >> 1; // ε_0 := | x_0 - sqrt(a) | ≤ 2**(e-2)
+ 548 |     | 
+ 549 |     |             // From here, Newton's method give us:
+ 550 |     |             // x_{n+1} = (x_n + a / x_n) / 2
+ 551 |     |             //
+ 552 |     |             // One should note that:
+ 553 |     |             // x_{n+1}² - a = ((x_n + a / x_n) / 2)² - a
+ 554 |     |             //              = ((x_n² + a) / (2 * x_n))² - a
+ 555 |     |             //              = (x_n⁴ + 2 * a * x_n² + a²) / (4 * x_n²) - a
+ 556 |     |             //              = (x_n⁴ + 2 * a * x_n² + a² - 4 * a * x_n²) / (4 * x_n²)
+ 557 |     |             //              = (x_n⁴ - 2 * a * x_n² + a²) / (4 * x_n²)
+ 558 |     |             //              = (x_n² - a)² / (2 * x_n)²
+ 559 |     |             //              = ((x_n² - a) / (2 * x_n))²
+ 560 |     |             //              ≥ 0
+ 561 |     |             // Which proves that for all n ≥ 1, sqrt(a) ≤ x_n
+ 562 |     |             //
+ 563 |     |             // This gives us the proof of quadratic convergence of the sequence:
+ 564 |     |             // ε_{n+1} = | x_{n+1} - sqrt(a) |
+ 565 |     |             //         = | (x_n + a / x_n) / 2 - sqrt(a) |
+ 566 |     |             //         = | (x_n² + a - 2*x_n*sqrt(a)) / (2 * x_n) |
+ 567 |     |             //         = | (x_n - sqrt(a))² / (2 * x_n) |
+ 568 |     |             //         = | ε_n² / (2 * x_n) |
+ 569 |     |             //         = ε_n² / | (2 * x_n) |
+ 570 |     |             //
+ 571 |     |             // For the first iteration, we have a special case where x_0 is known:
+ 572 |     |             // ε_1 = ε_0² / | (2 * x_0) |
+ 573 |     |             //     ≤ (2**(e-2))² / (2 * (2**(e-1) + 2**(e-2)))
+ 574 |     |             //     ≤ 2**(2*e-4) / (3 * 2**(e-1))
+ 575 |     |             //     ≤ 2**(e-3) / 3
+ 576 |     |             //     ≤ 2**(e-3-log2(3))
+ 577 |     |             //     ≤ 2**(e-4.5)
+ 578 |     |             //
+ 579 |     |             // For the following iterations, we use the fact that, 2**(e-1) ≤ sqrt(a) ≤ x_n:
+ 580 |     |             // ε_{n+1} = ε_n² / | (2 * x_n) |
+ 581 |     |             //         ≤ (2**(e-k))² / (2 * 2**(e-1))
+ 582 |     |             //         ≤ 2**(2*e-2*k) / 2**e
+ 583 |     |             //         ≤ 2**(e-2*k)
+ 584 |     |             xn = (xn + a / xn) >> 1; // ε_1 := | x_1 - sqrt(a) | ≤ 2**(e-4.5)  -- special case, see above
+ 585 |     |             xn = (xn + a / xn) >> 1; // ε_2 := | x_2 - sqrt(a) | ≤ 2**(e-9)    -- general case with k = 4.5
+ 586 |     |             xn = (xn + a / xn) >> 1; // ε_3 := | x_3 - sqrt(a) | ≤ 2**(e-18)   -- general case with k = 9
+ 587 |     |             xn = (xn + a / xn) >> 1; // ε_4 := | x_4 - sqrt(a) | ≤ 2**(e-36)   -- general case with k = 18
+ 588 |     |             xn = (xn + a / xn) >> 1; // ε_5 := | x_5 - sqrt(a) | ≤ 2**(e-72)   -- general case with k = 36
+ 589 |     |             xn = (xn + a / xn) >> 1; // ε_6 := | x_6 - sqrt(a) | ≤ 2**(e-144)  -- general case with k = 72
+ 590 |     | 
+ 591 |     |             // Because e ≤ 128 (as discussed during the first estimation phase), we know have reached a precision
+ 592 |     |             // ε_6 ≤ 2**(e-144) < 1. Given we're operating on integers, then we can ensure that xn is now either
+ 593 |     |             // sqrt(a) or sqrt(a) + 1.
+ 594 |     |             return xn - SafeCast.toUint(xn > a / xn);
+ 595 |     |         }
+ 596 |     |     }
+ 597 |     | 
+ 598 |     |     /**
+ 599 |     |      * @dev Calculates sqrt(a), following the selected rounding direction.
+ 600 |     |      */
+ 601 |     |     function sqrt(uint256 a, Rounding rounding) internal pure returns (uint256) {
+ 602 |     |         unchecked {
+ 603 |     |             uint256 result = sqrt(a);
+ 604 |     |             return result + SafeCast.toUint(unsignedRoundsUp(rounding) && result * result < a);
+ 605 |     |         }
+ 606 |     |     }
+ 607 |     | 
+ 608 |     |     /**
+ 609 |     |      * @dev Return the log in base 2 of a positive value rounded towards zero.
+ 610 |     |      * Returns 0 if given 0.
+ 611 |     |      */
+ 612 |     |     function log2(uint256 x) internal pure returns (uint256 r) {
+ 613 |     |         // If value has upper 128 bits set, log2 result is at least 128
+ 614 |     |         r = SafeCast.toUint(x > 0xffffffffffffffffffffffffffffffff) << 7;
+ 615 |     |         // If upper 64 bits of 128-bit half set, add 64 to result
+ 616 |     |         r |= SafeCast.toUint((x >> r) > 0xffffffffffffffff) << 6;
+ 617 |     |         // If upper 32 bits of 64-bit half set, add 32 to result
+ 618 |     |         r |= SafeCast.toUint((x >> r) > 0xffffffff) << 5;
+ 619 |     |         // If upper 16 bits of 32-bit half set, add 16 to result
+ 620 |     |         r |= SafeCast.toUint((x >> r) > 0xffff) << 4;
+ 621 |     |         // If upper 8 bits of 16-bit half set, add 8 to result
+ 622 |     |         r |= SafeCast.toUint((x >> r) > 0xff) << 3;
+ 623 |     |         // If upper 4 bits of 8-bit half set, add 4 to result
+ 624 |     |         r |= SafeCast.toUint((x >> r) > 0xf) << 2;
+ 625 |     | 
+ 626 |     |         // Shifts value right by the current result and use it as an index into this lookup table:
+ 627 |     |         //
+ 628 |     |         // | x (4 bits) |  index  | table[index] = MSB position |
+ 629 |     |         // |------------|---------|-----------------------------|
+ 630 |     |         // |    0000    |    0    |        table[0] = 0         |
+ 631 |     |         // |    0001    |    1    |        table[1] = 0         |
+ 632 |     |         // |    0010    |    2    |        table[2] = 1         |
+ 633 |     |         // |    0011    |    3    |        table[3] = 1         |
+ 634 |     |         // |    0100    |    4    |        table[4] = 2         |
+ 635 |     |         // |    0101    |    5    |        table[5] = 2         |
+ 636 |     |         // |    0110    |    6    |        table[6] = 2         |
+ 637 |     |         // |    0111    |    7    |        table[7] = 2         |
+ 638 |     |         // |    1000    |    8    |        table[8] = 3         |
+ 639 |     |         // |    1001    |    9    |        table[9] = 3         |
+ 640 |     |         // |    1010    |   10    |        table[10] = 3        |
+ 641 |     |         // |    1011    |   11    |        table[11] = 3        |
+ 642 |     |         // |    1100    |   12    |        table[12] = 3        |
+ 643 |     |         // |    1101    |   13    |        table[13] = 3        |
+ 644 |     |         // |    1110    |   14    |        table[14] = 3        |
+ 645 |     |         // |    1111    |   15    |        table[15] = 3        |
+ 646 |     |         //
+ 647 |     |         // The lookup table is represented as a 32-byte value with the MSB positions for 0-15 in the last 16 bytes.
+ 648 |     |         assembly ("memory-safe") {
+ 649 |     |             r := or(r, byte(shr(r, x), 0x0000010102020202030303030303030300000000000000000000000000000000))
+ 650 |     |         }
+ 651 |     |     }
+ 652 |     | 
+ 653 |     |     /**
+ 654 |     |      * @dev Return the log in base 2, following the selected rounding direction, of a positive value.
+ 655 |     |      * Returns 0 if given 0.
+ 656 |     |      */
+ 657 |     |     function log2(uint256 value, Rounding rounding) internal pure returns (uint256) {
+ 658 |     |         unchecked {
+ 659 |     |             uint256 result = log2(value);
+ 660 |     |             return result + SafeCast.toUint(unsignedRoundsUp(rounding) && 1 << result < value);
+ 661 |     |         }
+ 662 |     |     }
+ 663 |     | 
+ 664 |     |     /**
+ 665 |     |      * @dev Return the log in base 10 of a positive value rounded towards zero.
+ 666 |     |      * Returns 0 if given 0.
+ 667 |     |      */
+ 668 | *   |     function log10(uint256 value) internal pure returns (uint256) {
+ 669 | *   |         uint256 result = 0;
+ 670 |     |         unchecked {
+ 671 | *   |             if (value >= 10 ** 64) {
+ 672 |     |                 value /= 10 ** 64;
+ 673 |     |                 result += 64;
+ 674 |     |             }
+ 675 | *   |             if (value >= 10 ** 32) {
+ 676 |     |                 value /= 10 ** 32;
+ 677 |     |                 result += 32;
+ 678 |     |             }
+ 679 | *   |             if (value >= 10 ** 16) {
+ 680 |     |                 value /= 10 ** 16;
+ 681 |     |                 result += 16;
+ 682 |     |             }
+ 683 | *   |             if (value >= 10 ** 8) {
+ 684 |     |                 value /= 10 ** 8;
+ 685 |     |                 result += 8;
+ 686 |     |             }
+ 687 | *   |             if (value >= 10 ** 4) {
+ 688 |     |                 value /= 10 ** 4;
+ 689 |     |                 result += 4;
+ 690 |     |             }
+ 691 | *   |             if (value >= 10 ** 2) {
+ 692 |     |                 value /= 10 ** 2;
+ 693 |     |                 result += 2;
+ 694 |     |             }
+ 695 | *   |             if (value >= 10 ** 1) {
+ 696 |     |                 result += 1;
+ 697 |     |             }
+ 698 |     |         }
+ 699 | *   |         return result;
+ 700 |     |     }
+ 701 |     | 
+ 702 |     |     /**
+ 703 |     |      * @dev Return the log in base 10, following the selected rounding direction, of a positive value.
+ 704 |     |      * Returns 0 if given 0.
+ 705 |     |      */
+ 706 |     |     function log10(uint256 value, Rounding rounding) internal pure returns (uint256) {
+ 707 |     |         unchecked {
+ 708 |     |             uint256 result = log10(value);
+ 709 |     |             return result + SafeCast.toUint(unsignedRoundsUp(rounding) && 10 ** result < value);
+ 710 |     |         }
+ 711 |     |     }
+ 712 |     | 
+ 713 |     |     /**
+ 714 |     |      * @dev Return the log in base 256 of a positive value rounded towards zero.
+ 715 |     |      * Returns 0 if given 0.
+ 716 |     |      *
+ 717 |     |      * Adding one to the result gives the number of pairs of hex symbols needed to represent `value` as a hex string.
+ 718 |     |      */
+ 719 |     |     function log256(uint256 x) internal pure returns (uint256 r) {
+ 720 |     |         // If value has upper 128 bits set, log2 result is at least 128
+ 721 |     |         r = SafeCast.toUint(x > 0xffffffffffffffffffffffffffffffff) << 7;
+ 722 |     |         // If upper 64 bits of 128-bit half set, add 64 to result
+ 723 |     |         r |= SafeCast.toUint((x >> r) > 0xffffffffffffffff) << 6;
+ 724 |     |         // If upper 32 bits of 64-bit half set, add 32 to result
+ 725 |     |         r |= SafeCast.toUint((x >> r) > 0xffffffff) << 5;
+ 726 |     |         // If upper 16 bits of 32-bit half set, add 16 to result
+ 727 |     |         r |= SafeCast.toUint((x >> r) > 0xffff) << 4;
+ 728 |     |         // Add 1 if upper 8 bits of 16-bit half set, and divide accumulated result by 8
+ 729 |     |         return (r >> 3) | SafeCast.toUint((x >> r) > 0xff);
+ 730 |     |     }
+ 731 |     | 
+ 732 |     |     /**
+ 733 |     |      * @dev Return the log in base 256, following the selected rounding direction, of a positive value.
+ 734 |     |      * Returns 0 if given 0.
+ 735 |     |      */
+ 736 |     |     function log256(uint256 value, Rounding rounding) internal pure returns (uint256) {
+ 737 |     |         unchecked {
+ 738 |     |             uint256 result = log256(value);
+ 739 |     |             return result + SafeCast.toUint(unsignedRoundsUp(rounding) && 1 << (result << 3) < value);
+ 740 |     |         }
+ 741 |     |     }
+ 742 |     | 
+ 743 |     |     /**
+ 744 |     |      * @dev Returns whether a provided rounding mode is considered rounding up for unsigned integers.
+ 745 |     |      */
+ 746 |     |     function unsignedRoundsUp(Rounding rounding) internal pure returns (bool) {
+ 747 |     |         return uint8(rounding) % 2 == 1;
+ 748 |     |     }
+ 749 |     | 
+ 750 |     |     /**
+ 751 |     |      * @dev Counts the number of leading zero bits in a uint256.
+ 752 |     |      */
+ 753 |     |     function clz(uint256 x) internal pure returns (uint256) {
+ 754 |     |         return ternary(x == 0, 256, 255 - log2(x));
+ 755 |     |     }
+ 756 |     | }
+ 757 |     | 
+
+/var/home/robTheBob/gits/sec_proj/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol
+    1 |     | // SPDX-License-Identifier: MIT
+    2 |     | // OpenZeppelin Contracts (last updated v5.1.0) (utils/math/SafeCast.sol)
+    3 |     | // This file was procedurally generated from scripts/generate/templates/SafeCast.js.
+    4 |     | 
+    5 |     | pragma solidity ^0.8.20;
+    6 |     | 
+    7 |     | /**
+    8 |     |  * @dev Wrappers over Solidity's uintXX/intXX/bool casting operators with added overflow
+    9 |     |  * checks.
+   10 |     |  *
+   11 |     |  * Downcasting from uint256/int256 in Solidity does not revert on overflow. This can
+   12 |     |  * easily result in undesired exploitation or bugs, since developers usually
+   13 |     |  * assume that overflows raise errors. `SafeCast` restores this intuition by
+   14 |     |  * reverting the transaction when such an operation overflows.
+   15 |     |  *
+   16 |     |  * Using this library instead of the unchecked operations eliminates an entire
+   17 |     |  * class of bugs, so it's recommended to use it always.
+   18 |     |  */
+   19 |     | library SafeCast {
+   20 |     |     /**
+   21 |     |      * @dev Value doesn't fit in an uint of `bits` size.
+   22 |     |      */
+   23 |     |     error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
+   24 |     | 
+   25 |     |     /**
+   26 |     |      * @dev An int value doesn't fit in an uint of `bits` size.
+   27 |     |      */
+   28 |     |     error SafeCastOverflowedIntToUint(int256 value);
+   29 |     | 
+   30 |     |     /**
+   31 |     |      * @dev Value doesn't fit in an int of `bits` size.
+   32 |     |      */
+   33 |     |     error SafeCastOverflowedIntDowncast(uint8 bits, int256 value);
+   34 |     | 
+   35 |     |     /**
+   36 |     |      * @dev An uint value doesn't fit in an int of `bits` size.
+   37 |     |      */
+   38 |     |     error SafeCastOverflowedUintToInt(uint256 value);
+   39 |     | 
+   40 |     |     /**
+   41 |     |      * @dev Returns the downcasted uint248 from uint256, reverting on
+   42 |     |      * overflow (when the input is greater than largest uint248).
+   43 |     |      *
+   44 |     |      * Counterpart to Solidity's `uint248` operator.
+   45 |     |      *
+   46 |     |      * Requirements:
+   47 |     |      *
+   48 |     |      * - input must fit into 248 bits
+   49 |     |      */
+   50 |     |     function toUint248(uint256 value) internal pure returns (uint248) {
+   51 |     |         if (value > type(uint248).max) {
+   52 |     |             revert SafeCastOverflowedUintDowncast(248, value);
+   53 |     |         }
+   54 |     |         return uint248(value);
+   55 |     |     }
+   56 |     | 
+   57 |     |     /**
+   58 |     |      * @dev Returns the downcasted uint240 from uint256, reverting on
+   59 |     |      * overflow (when the input is greater than largest uint240).
+   60 |     |      *
+   61 |     |      * Counterpart to Solidity's `uint240` operator.
+   62 |     |      *
+   63 |     |      * Requirements:
+   64 |     |      *
+   65 |     |      * - input must fit into 240 bits
+   66 |     |      */
+   67 |     |     function toUint240(uint256 value) internal pure returns (uint240) {
+   68 |     |         if (value > type(uint240).max) {
+   69 |     |             revert SafeCastOverflowedUintDowncast(240, value);
+   70 |     |         }
+   71 |     |         return uint240(value);
+   72 |     |     }
+   73 |     | 
+   74 |     |     /**
+   75 |     |      * @dev Returns the downcasted uint232 from uint256, reverting on
+   76 |     |      * overflow (when the input is greater than largest uint232).
+   77 |     |      *
+   78 |     |      * Counterpart to Solidity's `uint232` operator.
+   79 |     |      *
+   80 |     |      * Requirements:
+   81 |     |      *
+   82 |     |      * - input must fit into 232 bits
+   83 |     |      */
+   84 |     |     function toUint232(uint256 value) internal pure returns (uint232) {
+   85 |     |         if (value > type(uint232).max) {
+   86 |     |             revert SafeCastOverflowedUintDowncast(232, value);
+   87 |     |         }
+   88 |     |         return uint232(value);
+   89 |     |     }
+   90 |     | 
+   91 |     |     /**
+   92 |     |      * @dev Returns the downcasted uint224 from uint256, reverting on
+   93 |     |      * overflow (when the input is greater than largest uint224).
+   94 |     |      *
+   95 |     |      * Counterpart to Solidity's `uint224` operator.
+   96 |     |      *
+   97 |     |      * Requirements:
+   98 |     |      *
+   99 |     |      * - input must fit into 224 bits
+  100 |     |      */
+  101 |     |     function toUint224(uint256 value) internal pure returns (uint224) {
+  102 |     |         if (value > type(uint224).max) {
+  103 |     |             revert SafeCastOverflowedUintDowncast(224, value);
+  104 |     |         }
+  105 |     |         return uint224(value);
+  106 |     |     }
+  107 |     | 
+  108 |     |     /**
+  109 |     |      * @dev Returns the downcasted uint216 from uint256, reverting on
+  110 |     |      * overflow (when the input is greater than largest uint216).
+  111 |     |      *
+  112 |     |      * Counterpart to Solidity's `uint216` operator.
+  113 |     |      *
+  114 |     |      * Requirements:
+  115 |     |      *
+  116 |     |      * - input must fit into 216 bits
+  117 |     |      */
+  118 |     |     function toUint216(uint256 value) internal pure returns (uint216) {
+  119 |     |         if (value > type(uint216).max) {
+  120 |     |             revert SafeCastOverflowedUintDowncast(216, value);
+  121 |     |         }
+  122 |     |         return uint216(value);
+  123 |     |     }
+  124 |     | 
+  125 |     |     /**
+  126 |     |      * @dev Returns the downcasted uint208 from uint256, reverting on
+  127 |     |      * overflow (when the input is greater than largest uint208).
+  128 |     |      *
+  129 |     |      * Counterpart to Solidity's `uint208` operator.
+  130 |     |      *
+  131 |     |      * Requirements:
+  132 |     |      *
+  133 |     |      * - input must fit into 208 bits
+  134 |     |      */
+  135 |     |     function toUint208(uint256 value) internal pure returns (uint208) {
+  136 |     |         if (value > type(uint208).max) {
+  137 |     |             revert SafeCastOverflowedUintDowncast(208, value);
+  138 |     |         }
+  139 |     |         return uint208(value);
+  140 |     |     }
+  141 |     | 
+  142 |     |     /**
+  143 |     |      * @dev Returns the downcasted uint200 from uint256, reverting on
+  144 |     |      * overflow (when the input is greater than largest uint200).
+  145 |     |      *
+  146 |     |      * Counterpart to Solidity's `uint200` operator.
+  147 |     |      *
+  148 |     |      * Requirements:
+  149 |     |      *
+  150 |     |      * - input must fit into 200 bits
+  151 |     |      */
+  152 |     |     function toUint200(uint256 value) internal pure returns (uint200) {
+  153 |     |         if (value > type(uint200).max) {
+  154 |     |             revert SafeCastOverflowedUintDowncast(200, value);
+  155 |     |         }
+  156 |     |         return uint200(value);
+  157 |     |     }
+  158 |     | 
+  159 |     |     /**
+  160 |     |      * @dev Returns the downcasted uint192 from uint256, reverting on
+  161 |     |      * overflow (when the input is greater than largest uint192).
+  162 |     |      *
+  163 |     |      * Counterpart to Solidity's `uint192` operator.
+  164 |     |      *
+  165 |     |      * Requirements:
+  166 |     |      *
+  167 |     |      * - input must fit into 192 bits
+  168 |     |      */
+  169 |     |     function toUint192(uint256 value) internal pure returns (uint192) {
+  170 |     |         if (value > type(uint192).max) {
+  171 |     |             revert SafeCastOverflowedUintDowncast(192, value);
+  172 |     |         }
+  173 |     |         return uint192(value);
+  174 |     |     }
+  175 |     | 
+  176 |     |     /**
+  177 |     |      * @dev Returns the downcasted uint184 from uint256, reverting on
+  178 |     |      * overflow (when the input is greater than largest uint184).
+  179 |     |      *
+  180 |     |      * Counterpart to Solidity's `uint184` operator.
+  181 |     |      *
+  182 |     |      * Requirements:
+  183 |     |      *
+  184 |     |      * - input must fit into 184 bits
+  185 |     |      */
+  186 |     |     function toUint184(uint256 value) internal pure returns (uint184) {
+  187 |     |         if (value > type(uint184).max) {
+  188 |     |             revert SafeCastOverflowedUintDowncast(184, value);
+  189 |     |         }
+  190 |     |         return uint184(value);
+  191 |     |     }
+  192 |     | 
+  193 |     |     /**
+  194 |     |      * @dev Returns the downcasted uint176 from uint256, reverting on
+  195 |     |      * overflow (when the input is greater than largest uint176).
+  196 |     |      *
+  197 |     |      * Counterpart to Solidity's `uint176` operator.
+  198 |     |      *
+  199 |     |      * Requirements:
+  200 |     |      *
+  201 |     |      * - input must fit into 176 bits
+  202 |     |      */
+  203 |     |     function toUint176(uint256 value) internal pure returns (uint176) {
+  204 |     |         if (value > type(uint176).max) {
+  205 |     |             revert SafeCastOverflowedUintDowncast(176, value);
+  206 |     |         }
+  207 |     |         return uint176(value);
+  208 |     |     }
+  209 |     | 
+  210 |     |     /**
+  211 |     |      * @dev Returns the downcasted uint168 from uint256, reverting on
+  212 |     |      * overflow (when the input is greater than largest uint168).
+  213 |     |      *
+  214 |     |      * Counterpart to Solidity's `uint168` operator.
+  215 |     |      *
+  216 |     |      * Requirements:
+  217 |     |      *
+  218 |     |      * - input must fit into 168 bits
+  219 |     |      */
+  220 |     |     function toUint168(uint256 value) internal pure returns (uint168) {
+  221 |     |         if (value > type(uint168).max) {
+  222 |     |             revert SafeCastOverflowedUintDowncast(168, value);
+  223 |     |         }
+  224 |     |         return uint168(value);
+  225 |     |     }
+  226 |     | 
+  227 |     |     /**
+  228 |     |      * @dev Returns the downcasted uint160 from uint256, reverting on
+  229 |     |      * overflow (when the input is greater than largest uint160).
+  230 |     |      *
+  231 |     |      * Counterpart to Solidity's `uint160` operator.
+  232 |     |      *
+  233 |     |      * Requirements:
+  234 |     |      *
+  235 |     |      * - input must fit into 160 bits
+  236 |     |      */
+  237 |     |     function toUint160(uint256 value) internal pure returns (uint160) {
+  238 |     |         if (value > type(uint160).max) {
+  239 |     |             revert SafeCastOverflowedUintDowncast(160, value);
+  240 |     |         }
+  241 |     |         return uint160(value);
+  242 |     |     }
+  243 |     | 
+  244 |     |     /**
+  245 |     |      * @dev Returns the downcasted uint152 from uint256, reverting on
+  246 |     |      * overflow (when the input is greater than largest uint152).
+  247 |     |      *
+  248 |     |      * Counterpart to Solidity's `uint152` operator.
+  249 |     |      *
+  250 |     |      * Requirements:
+  251 |     |      *
+  252 |     |      * - input must fit into 152 bits
+  253 |     |      */
+  254 |     |     function toUint152(uint256 value) internal pure returns (uint152) {
+  255 |     |         if (value > type(uint152).max) {
+  256 |     |             revert SafeCastOverflowedUintDowncast(152, value);
+  257 |     |         }
+  258 |     |         return uint152(value);
+  259 |     |     }
+  260 |     | 
+  261 |     |     /**
+  262 |     |      * @dev Returns the downcasted uint144 from uint256, reverting on
+  263 |     |      * overflow (when the input is greater than largest uint144).
+  264 |     |      *
+  265 |     |      * Counterpart to Solidity's `uint144` operator.
+  266 |     |      *
+  267 |     |      * Requirements:
+  268 |     |      *
+  269 |     |      * - input must fit into 144 bits
+  270 |     |      */
+  271 |     |     function toUint144(uint256 value) internal pure returns (uint144) {
+  272 |     |         if (value > type(uint144).max) {
+  273 |     |             revert SafeCastOverflowedUintDowncast(144, value);
+  274 |     |         }
+  275 |     |         return uint144(value);
+  276 |     |     }
+  277 |     | 
+  278 |     |     /**
+  279 |     |      * @dev Returns the downcasted uint136 from uint256, reverting on
+  280 |     |      * overflow (when the input is greater than largest uint136).
+  281 |     |      *
+  282 |     |      * Counterpart to Solidity's `uint136` operator.
+  283 |     |      *
+  284 |     |      * Requirements:
+  285 |     |      *
+  286 |     |      * - input must fit into 136 bits
+  287 |     |      */
+  288 |     |     function toUint136(uint256 value) internal pure returns (uint136) {
+  289 |     |         if (value > type(uint136).max) {
+  290 |     |             revert SafeCastOverflowedUintDowncast(136, value);
+  291 |     |         }
+  292 |     |         return uint136(value);
+  293 |     |     }
+  294 |     | 
+  295 |     |     /**
+  296 |     |      * @dev Returns the downcasted uint128 from uint256, reverting on
+  297 |     |      * overflow (when the input is greater than largest uint128).
+  298 |     |      *
+  299 |     |      * Counterpart to Solidity's `uint128` operator.
+  300 |     |      *
+  301 |     |      * Requirements:
+  302 |     |      *
+  303 |     |      * - input must fit into 128 bits
+  304 |     |      */
+  305 |     |     function toUint128(uint256 value) internal pure returns (uint128) {
+  306 |     |         if (value > type(uint128).max) {
+  307 |     |             revert SafeCastOverflowedUintDowncast(128, value);
+  308 |     |         }
+  309 |     |         return uint128(value);
+  310 |     |     }
+  311 |     | 
+  312 |     |     /**
+  313 |     |      * @dev Returns the downcasted uint120 from uint256, reverting on
+  314 |     |      * overflow (when the input is greater than largest uint120).
+  315 |     |      *
+  316 |     |      * Counterpart to Solidity's `uint120` operator.
+  317 |     |      *
+  318 |     |      * Requirements:
+  319 |     |      *
+  320 |     |      * - input must fit into 120 bits
+  321 |     |      */
+  322 |     |     function toUint120(uint256 value) internal pure returns (uint120) {
+  323 |     |         if (value > type(uint120).max) {
+  324 |     |             revert SafeCastOverflowedUintDowncast(120, value);
+  325 |     |         }
+  326 |     |         return uint120(value);
+  327 |     |     }
+  328 |     | 
+  329 |     |     /**
+  330 |     |      * @dev Returns the downcasted uint112 from uint256, reverting on
+  331 |     |      * overflow (when the input is greater than largest uint112).
+  332 |     |      *
+  333 |     |      * Counterpart to Solidity's `uint112` operator.
+  334 |     |      *
+  335 |     |      * Requirements:
+  336 |     |      *
+  337 |     |      * - input must fit into 112 bits
+  338 |     |      */
+  339 |     |     function toUint112(uint256 value) internal pure returns (uint112) {
+  340 |     |         if (value > type(uint112).max) {
+  341 |     |             revert SafeCastOverflowedUintDowncast(112, value);
+  342 |     |         }
+  343 |     |         return uint112(value);
+  344 |     |     }
+  345 |     | 
+  346 |     |     /**
+  347 |     |      * @dev Returns the downcasted uint104 from uint256, reverting on
+  348 |     |      * overflow (when the input is greater than largest uint104).
+  349 |     |      *
+  350 |     |      * Counterpart to Solidity's `uint104` operator.
+  351 |     |      *
+  352 |     |      * Requirements:
+  353 |     |      *
+  354 |     |      * - input must fit into 104 bits
+  355 |     |      */
+  356 |     |     function toUint104(uint256 value) internal pure returns (uint104) {
+  357 |     |         if (value > type(uint104).max) {
+  358 |     |             revert SafeCastOverflowedUintDowncast(104, value);
+  359 |     |         }
+  360 |     |         return uint104(value);
+  361 |     |     }
+  362 |     | 
+  363 |     |     /**
+  364 |     |      * @dev Returns the downcasted uint96 from uint256, reverting on
+  365 |     |      * overflow (when the input is greater than largest uint96).
+  366 |     |      *
+  367 |     |      * Counterpart to Solidity's `uint96` operator.
+  368 |     |      *
+  369 |     |      * Requirements:
+  370 |     |      *
+  371 |     |      * - input must fit into 96 bits
+  372 |     |      */
+  373 |     |     function toUint96(uint256 value) internal pure returns (uint96) {
+  374 |     |         if (value > type(uint96).max) {
+  375 |     |             revert SafeCastOverflowedUintDowncast(96, value);
+  376 |     |         }
+  377 |     |         return uint96(value);
+  378 |     |     }
+  379 |     | 
+  380 |     |     /**
+  381 |     |      * @dev Returns the downcasted uint88 from uint256, reverting on
+  382 |     |      * overflow (when the input is greater than largest uint88).
+  383 |     |      *
+  384 |     |      * Counterpart to Solidity's `uint88` operator.
+  385 |     |      *
+  386 |     |      * Requirements:
+  387 |     |      *
+  388 |     |      * - input must fit into 88 bits
+  389 |     |      */
+  390 |     |     function toUint88(uint256 value) internal pure returns (uint88) {
+  391 |     |         if (value > type(uint88).max) {
+  392 |     |             revert SafeCastOverflowedUintDowncast(88, value);
+  393 |     |         }
+  394 |     |         return uint88(value);
+  395 |     |     }
+  396 |     | 
+  397 |     |     /**
+  398 |     |      * @dev Returns the downcasted uint80 from uint256, reverting on
+  399 |     |      * overflow (when the input is greater than largest uint80).
+  400 |     |      *
+  401 |     |      * Counterpart to Solidity's `uint80` operator.
+  402 |     |      *
+  403 |     |      * Requirements:
+  404 |     |      *
+  405 |     |      * - input must fit into 80 bits
+  406 |     |      */
+  407 |     |     function toUint80(uint256 value) internal pure returns (uint80) {
+  408 |     |         if (value > type(uint80).max) {
+  409 |     |             revert SafeCastOverflowedUintDowncast(80, value);
+  410 |     |         }
+  411 |     |         return uint80(value);
+  412 |     |     }
+  413 |     | 
+  414 |     |     /**
+  415 |     |      * @dev Returns the downcasted uint72 from uint256, reverting on
+  416 |     |      * overflow (when the input is greater than largest uint72).
+  417 |     |      *
+  418 |     |      * Counterpart to Solidity's `uint72` operator.
+  419 |     |      *
+  420 |     |      * Requirements:
+  421 |     |      *
+  422 |     |      * - input must fit into 72 bits
+  423 |     |      */
+  424 |     |     function toUint72(uint256 value) internal pure returns (uint72) {
+  425 |     |         if (value > type(uint72).max) {
+  426 |     |             revert SafeCastOverflowedUintDowncast(72, value);
+  427 |     |         }
+  428 |     |         return uint72(value);
+  429 |     |     }
+  430 |     | 
+  431 |     |     /**
+  432 |     |      * @dev Returns the downcasted uint64 from uint256, reverting on
+  433 |     |      * overflow (when the input is greater than largest uint64).
+  434 |     |      *
+  435 |     |      * Counterpart to Solidity's `uint64` operator.
+  436 |     |      *
+  437 |     |      * Requirements:
+  438 |     |      *
+  439 |     |      * - input must fit into 64 bits
+  440 |     |      */
+  441 |     |     function toUint64(uint256 value) internal pure returns (uint64) {
+  442 |     |         if (value > type(uint64).max) {
+  443 |     |             revert SafeCastOverflowedUintDowncast(64, value);
+  444 |     |         }
+  445 |     |         return uint64(value);
+  446 |     |     }
+  447 |     | 
+  448 |     |     /**
+  449 |     |      * @dev Returns the downcasted uint56 from uint256, reverting on
+  450 |     |      * overflow (when the input is greater than largest uint56).
+  451 |     |      *
+  452 |     |      * Counterpart to Solidity's `uint56` operator.
+  453 |     |      *
+  454 |     |      * Requirements:
+  455 |     |      *
+  456 |     |      * - input must fit into 56 bits
+  457 |     |      */
+  458 |     |     function toUint56(uint256 value) internal pure returns (uint56) {
+  459 |     |         if (value > type(uint56).max) {
+  460 |     |             revert SafeCastOverflowedUintDowncast(56, value);
+  461 |     |         }
+  462 |     |         return uint56(value);
+  463 |     |     }
+  464 |     | 
+  465 |     |     /**
+  466 |     |      * @dev Returns the downcasted uint48 from uint256, reverting on
+  467 |     |      * overflow (when the input is greater than largest uint48).
+  468 |     |      *
+  469 |     |      * Counterpart to Solidity's `uint48` operator.
+  470 |     |      *
+  471 |     |      * Requirements:
+  472 |     |      *
+  473 |     |      * - input must fit into 48 bits
+  474 |     |      */
+  475 |     |     function toUint48(uint256 value) internal pure returns (uint48) {
+  476 |     |         if (value > type(uint48).max) {
+  477 |     |             revert SafeCastOverflowedUintDowncast(48, value);
+  478 |     |         }
+  479 |     |         return uint48(value);
+  480 |     |     }
+  481 |     | 
+  482 |     |     /**
+  483 |     |      * @dev Returns the downcasted uint40 from uint256, reverting on
+  484 |     |      * overflow (when the input is greater than largest uint40).
+  485 |     |      *
+  486 |     |      * Counterpart to Solidity's `uint40` operator.
+  487 |     |      *
+  488 |     |      * Requirements:
+  489 |     |      *
+  490 |     |      * - input must fit into 40 bits
+  491 |     |      */
+  492 |     |     function toUint40(uint256 value) internal pure returns (uint40) {
+  493 |     |         if (value > type(uint40).max) {
+  494 |     |             revert SafeCastOverflowedUintDowncast(40, value);
+  495 |     |         }
+  496 |     |         return uint40(value);
+  497 |     |     }
+  498 |     | 
+  499 |     |     /**
+  500 |     |      * @dev Returns the downcasted uint32 from uint256, reverting on
+  501 |     |      * overflow (when the input is greater than largest uint32).
+  502 |     |      *
+  503 |     |      * Counterpart to Solidity's `uint32` operator.
+  504 |     |      *
+  505 |     |      * Requirements:
+  506 |     |      *
+  507 |     |      * - input must fit into 32 bits
+  508 |     |      */
+  509 |     |     function toUint32(uint256 value) internal pure returns (uint32) {
+  510 |     |         if (value > type(uint32).max) {
+  511 |     |             revert SafeCastOverflowedUintDowncast(32, value);
+  512 |     |         }
+  513 |     |         return uint32(value);
+  514 |     |     }
+  515 |     | 
+  516 |     |     /**
+  517 |     |      * @dev Returns the downcasted uint24 from uint256, reverting on
+  518 |     |      * overflow (when the input is greater than largest uint24).
+  519 |     |      *
+  520 |     |      * Counterpart to Solidity's `uint24` operator.
+  521 |     |      *
+  522 |     |      * Requirements:
+  523 |     |      *
+  524 |     |      * - input must fit into 24 bits
+  525 |     |      */
+  526 |     |     function toUint24(uint256 value) internal pure returns (uint24) {
+  527 |     |         if (value > type(uint24).max) {
+  528 |     |             revert SafeCastOverflowedUintDowncast(24, value);
+  529 |     |         }
+  530 |     |         return uint24(value);
+  531 |     |     }
+  532 |     | 
+  533 |     |     /**
+  534 |     |      * @dev Returns the downcasted uint16 from uint256, reverting on
+  535 |     |      * overflow (when the input is greater than largest uint16).
+  536 |     |      *
+  537 |     |      * Counterpart to Solidity's `uint16` operator.
+  538 |     |      *
+  539 |     |      * Requirements:
+  540 |     |      *
+  541 |     |      * - input must fit into 16 bits
+  542 |     |      */
+  543 |     |     function toUint16(uint256 value) internal pure returns (uint16) {
+  544 |     |         if (value > type(uint16).max) {
+  545 |     |             revert SafeCastOverflowedUintDowncast(16, value);
+  546 |     |         }
+  547 |     |         return uint16(value);
+  548 |     |     }
+  549 |     | 
+  550 |     |     /**
+  551 |     |      * @dev Returns the downcasted uint8 from uint256, reverting on
+  552 |     |      * overflow (when the input is greater than largest uint8).
+  553 |     |      *
+  554 |     |      * Counterpart to Solidity's `uint8` operator.
+  555 |     |      *
+  556 |     |      * Requirements:
+  557 |     |      *
+  558 |     |      * - input must fit into 8 bits
+  559 |     |      */
+  560 |     |     function toUint8(uint256 value) internal pure returns (uint8) {
+  561 |     |         if (value > type(uint8).max) {
+  562 |     |             revert SafeCastOverflowedUintDowncast(8, value);
+  563 |     |         }
+  564 |     |         return uint8(value);
+  565 |     |     }
+  566 |     | 
+  567 |     |     /**
+  568 |     |      * @dev Converts a signed int256 into an unsigned uint256.
+  569 |     |      *
+  570 |     |      * Requirements:
+  571 |     |      *
+  572 |     |      * - input must be greater than or equal to 0.
+  573 |     |      */
+  574 |     |     function toUint256(int256 value) internal pure returns (uint256) {
+  575 |     |         if (value < 0) {
+  576 |     |             revert SafeCastOverflowedIntToUint(value);
+  577 |     |         }
+  578 |     |         return uint256(value);
+  579 |     |     }
+  580 |     | 
+  581 |     |     /**
+  582 |     |      * @dev Returns the downcasted int248 from int256, reverting on
+  583 |     |      * overflow (when the input is less than smallest int248 or
+  584 |     |      * greater than largest int248).
+  585 |     |      *
+  586 |     |      * Counterpart to Solidity's `int248` operator.
+  587 |     |      *
+  588 |     |      * Requirements:
+  589 |     |      *
+  590 |     |      * - input must fit into 248 bits
+  591 |     |      */
+  592 |     |     function toInt248(int256 value) internal pure returns (int248 downcasted) {
+  593 |     |         downcasted = int248(value);
+  594 |     |         if (downcasted != value) {
+  595 |     |             revert SafeCastOverflowedIntDowncast(248, value);
+  596 |     |         }
+  597 |     |     }
+  598 |     | 
+  599 |     |     /**
+  600 |     |      * @dev Returns the downcasted int240 from int256, reverting on
+  601 |     |      * overflow (when the input is less than smallest int240 or
+  602 |     |      * greater than largest int240).
+  603 |     |      *
+  604 |     |      * Counterpart to Solidity's `int240` operator.
+  605 |     |      *
+  606 |     |      * Requirements:
+  607 |     |      *
+  608 |     |      * - input must fit into 240 bits
+  609 |     |      */
+  610 |     |     function toInt240(int256 value) internal pure returns (int240 downcasted) {
+  611 |     |         downcasted = int240(value);
+  612 |     |         if (downcasted != value) {
+  613 |     |             revert SafeCastOverflowedIntDowncast(240, value);
+  614 |     |         }
+  615 |     |     }
+  616 |     | 
+  617 |     |     /**
+  618 |     |      * @dev Returns the downcasted int232 from int256, reverting on
+  619 |     |      * overflow (when the input is less than smallest int232 or
+  620 |     |      * greater than largest int232).
+  621 |     |      *
+  622 |     |      * Counterpart to Solidity's `int232` operator.
+  623 |     |      *
+  624 |     |      * Requirements:
+  625 |     |      *
+  626 |     |      * - input must fit into 232 bits
+  627 |     |      */
+  628 |     |     function toInt232(int256 value) internal pure returns (int232 downcasted) {
+  629 |     |         downcasted = int232(value);
+  630 |     |         if (downcasted != value) {
+  631 |     |             revert SafeCastOverflowedIntDowncast(232, value);
+  632 |     |         }
+  633 |     |     }
+  634 |     | 
+  635 |     |     /**
+  636 |     |      * @dev Returns the downcasted int224 from int256, reverting on
+  637 |     |      * overflow (when the input is less than smallest int224 or
+  638 |     |      * greater than largest int224).
+  639 |     |      *
+  640 |     |      * Counterpart to Solidity's `int224` operator.
+  641 |     |      *
+  642 |     |      * Requirements:
+  643 |     |      *
+  644 |     |      * - input must fit into 224 bits
+  645 |     |      */
+  646 |     |     function toInt224(int256 value) internal pure returns (int224 downcasted) {
+  647 |     |         downcasted = int224(value);
+  648 |     |         if (downcasted != value) {
+  649 |     |             revert SafeCastOverflowedIntDowncast(224, value);
+  650 |     |         }
+  651 |     |     }
+  652 |     | 
+  653 |     |     /**
+  654 |     |      * @dev Returns the downcasted int216 from int256, reverting on
+  655 |     |      * overflow (when the input is less than smallest int216 or
+  656 |     |      * greater than largest int216).
+  657 |     |      *
+  658 |     |      * Counterpart to Solidity's `int216` operator.
+  659 |     |      *
+  660 |     |      * Requirements:
+  661 |     |      *
+  662 |     |      * - input must fit into 216 bits
+  663 |     |      */
+  664 |     |     function toInt216(int256 value) internal pure returns (int216 downcasted) {
+  665 |     |         downcasted = int216(value);
+  666 |     |         if (downcasted != value) {
+  667 |     |             revert SafeCastOverflowedIntDowncast(216, value);
+  668 |     |         }
+  669 |     |     }
+  670 |     | 
+  671 |     |     /**
+  672 |     |      * @dev Returns the downcasted int208 from int256, reverting on
+  673 |     |      * overflow (when the input is less than smallest int208 or
+  674 |     |      * greater than largest int208).
+  675 |     |      *
+  676 |     |      * Counterpart to Solidity's `int208` operator.
+  677 |     |      *
+  678 |     |      * Requirements:
+  679 |     |      *
+  680 |     |      * - input must fit into 208 bits
+  681 |     |      */
+  682 |     |     function toInt208(int256 value) internal pure returns (int208 downcasted) {
+  683 |     |         downcasted = int208(value);
+  684 |     |         if (downcasted != value) {
+  685 |     |             revert SafeCastOverflowedIntDowncast(208, value);
+  686 |     |         }
+  687 |     |     }
+  688 |     | 
+  689 |     |     /**
+  690 |     |      * @dev Returns the downcasted int200 from int256, reverting on
+  691 |     |      * overflow (when the input is less than smallest int200 or
+  692 |     |      * greater than largest int200).
+  693 |     |      *
+  694 |     |      * Counterpart to Solidity's `int200` operator.
+  695 |     |      *
+  696 |     |      * Requirements:
+  697 |     |      *
+  698 |     |      * - input must fit into 200 bits
+  699 |     |      */
+  700 |     |     function toInt200(int256 value) internal pure returns (int200 downcasted) {
+  701 |     |         downcasted = int200(value);
+  702 |     |         if (downcasted != value) {
+  703 |     |             revert SafeCastOverflowedIntDowncast(200, value);
+  704 |     |         }
+  705 |     |     }
+  706 |     | 
+  707 |     |     /**
+  708 |     |      * @dev Returns the downcasted int192 from int256, reverting on
+  709 |     |      * overflow (when the input is less than smallest int192 or
+  710 |     |      * greater than largest int192).
+  711 |     |      *
+  712 |     |      * Counterpart to Solidity's `int192` operator.
+  713 |     |      *
+  714 |     |      * Requirements:
+  715 |     |      *
+  716 |     |      * - input must fit into 192 bits
+  717 |     |      */
+  718 |     |     function toInt192(int256 value) internal pure returns (int192 downcasted) {
+  719 |     |         downcasted = int192(value);
+  720 |     |         if (downcasted != value) {
+  721 |     |             revert SafeCastOverflowedIntDowncast(192, value);
+  722 |     |         }
+  723 |     |     }
+  724 |     | 
+  725 |     |     /**
+  726 |     |      * @dev Returns the downcasted int184 from int256, reverting on
+  727 |     |      * overflow (when the input is less than smallest int184 or
+  728 |     |      * greater than largest int184).
+  729 |     |      *
+  730 |     |      * Counterpart to Solidity's `int184` operator.
+  731 |     |      *
+  732 |     |      * Requirements:
+  733 |     |      *
+  734 |     |      * - input must fit into 184 bits
+  735 |     |      */
+  736 |     |     function toInt184(int256 value) internal pure returns (int184 downcasted) {
+  737 |     |         downcasted = int184(value);
+  738 |     |         if (downcasted != value) {
+  739 |     |             revert SafeCastOverflowedIntDowncast(184, value);
+  740 |     |         }
+  741 |     |     }
+  742 |     | 
+  743 |     |     /**
+  744 |     |      * @dev Returns the downcasted int176 from int256, reverting on
+  745 |     |      * overflow (when the input is less than smallest int176 or
+  746 |     |      * greater than largest int176).
+  747 |     |      *
+  748 |     |      * Counterpart to Solidity's `int176` operator.
+  749 |     |      *
+  750 |     |      * Requirements:
+  751 |     |      *
+  752 |     |      * - input must fit into 176 bits
+  753 |     |      */
+  754 |     |     function toInt176(int256 value) internal pure returns (int176 downcasted) {
+  755 |     |         downcasted = int176(value);
+  756 |     |         if (downcasted != value) {
+  757 |     |             revert SafeCastOverflowedIntDowncast(176, value);
+  758 |     |         }
+  759 |     |     }
+  760 |     | 
+  761 |     |     /**
+  762 |     |      * @dev Returns the downcasted int168 from int256, reverting on
+  763 |     |      * overflow (when the input is less than smallest int168 or
+  764 |     |      * greater than largest int168).
+  765 |     |      *
+  766 |     |      * Counterpart to Solidity's `int168` operator.
+  767 |     |      *
+  768 |     |      * Requirements:
+  769 |     |      *
+  770 |     |      * - input must fit into 168 bits
+  771 |     |      */
+  772 |     |     function toInt168(int256 value) internal pure returns (int168 downcasted) {
+  773 |     |         downcasted = int168(value);
+  774 |     |         if (downcasted != value) {
+  775 |     |             revert SafeCastOverflowedIntDowncast(168, value);
+  776 |     |         }
+  777 |     |     }
+  778 |     | 
+  779 |     |     /**
+  780 |     |      * @dev Returns the downcasted int160 from int256, reverting on
+  781 |     |      * overflow (when the input is less than smallest int160 or
+  782 |     |      * greater than largest int160).
+  783 |     |      *
+  784 |     |      * Counterpart to Solidity's `int160` operator.
+  785 |     |      *
+  786 |     |      * Requirements:
+  787 |     |      *
+  788 |     |      * - input must fit into 160 bits
+  789 |     |      */
+  790 |     |     function toInt160(int256 value) internal pure returns (int160 downcasted) {
+  791 |     |         downcasted = int160(value);
+  792 |     |         if (downcasted != value) {
+  793 |     |             revert SafeCastOverflowedIntDowncast(160, value);
+  794 |     |         }
+  795 |     |     }
+  796 |     | 
+  797 |     |     /**
+  798 |     |      * @dev Returns the downcasted int152 from int256, reverting on
+  799 |     |      * overflow (when the input is less than smallest int152 or
+  800 |     |      * greater than largest int152).
+  801 |     |      *
+  802 |     |      * Counterpart to Solidity's `int152` operator.
+  803 |     |      *
+  804 |     |      * Requirements:
+  805 |     |      *
+  806 |     |      * - input must fit into 152 bits
+  807 |     |      */
+  808 |     |     function toInt152(int256 value) internal pure returns (int152 downcasted) {
+  809 |     |         downcasted = int152(value);
+  810 |     |         if (downcasted != value) {
+  811 |     |             revert SafeCastOverflowedIntDowncast(152, value);
+  812 |     |         }
+  813 |     |     }
+  814 |     | 
+  815 |     |     /**
+  816 |     |      * @dev Returns the downcasted int144 from int256, reverting on
+  817 |     |      * overflow (when the input is less than smallest int144 or
+  818 |     |      * greater than largest int144).
+  819 |     |      *
+  820 |     |      * Counterpart to Solidity's `int144` operator.
+  821 |     |      *
+  822 |     |      * Requirements:
+  823 |     |      *
+  824 |     |      * - input must fit into 144 bits
+  825 |     |      */
+  826 |     |     function toInt144(int256 value) internal pure returns (int144 downcasted) {
+  827 |     |         downcasted = int144(value);
+  828 |     |         if (downcasted != value) {
+  829 |     |             revert SafeCastOverflowedIntDowncast(144, value);
+  830 |     |         }
+  831 |     |     }
+  832 |     | 
+  833 |     |     /**
+  834 |     |      * @dev Returns the downcasted int136 from int256, reverting on
+  835 |     |      * overflow (when the input is less than smallest int136 or
+  836 |     |      * greater than largest int136).
+  837 |     |      *
+  838 |     |      * Counterpart to Solidity's `int136` operator.
+  839 |     |      *
+  840 |     |      * Requirements:
+  841 |     |      *
+  842 |     |      * - input must fit into 136 bits
+  843 |     |      */
+  844 |     |     function toInt136(int256 value) internal pure returns (int136 downcasted) {
+  845 |     |         downcasted = int136(value);
+  846 |     |         if (downcasted != value) {
+  847 |     |             revert SafeCastOverflowedIntDowncast(136, value);
+  848 |     |         }
+  849 |     |     }
+  850 |     | 
+  851 |     |     /**
+  852 |     |      * @dev Returns the downcasted int128 from int256, reverting on
+  853 |     |      * overflow (when the input is less than smallest int128 or
+  854 |     |      * greater than largest int128).
+  855 |     |      *
+  856 |     |      * Counterpart to Solidity's `int128` operator.
+  857 |     |      *
+  858 |     |      * Requirements:
+  859 |     |      *
+  860 |     |      * - input must fit into 128 bits
+  861 |     |      */
+  862 |     |     function toInt128(int256 value) internal pure returns (int128 downcasted) {
+  863 |     |         downcasted = int128(value);
+  864 |     |         if (downcasted != value) {
+  865 |     |             revert SafeCastOverflowedIntDowncast(128, value);
+  866 |     |         }
+  867 |     |     }
+  868 |     | 
+  869 |     |     /**
+  870 |     |      * @dev Returns the downcasted int120 from int256, reverting on
+  871 |     |      * overflow (when the input is less than smallest int120 or
+  872 |     |      * greater than largest int120).
+  873 |     |      *
+  874 |     |      * Counterpart to Solidity's `int120` operator.
+  875 |     |      *
+  876 |     |      * Requirements:
+  877 |     |      *
+  878 |     |      * - input must fit into 120 bits
+  879 |     |      */
+  880 |     |     function toInt120(int256 value) internal pure returns (int120 downcasted) {
+  881 |     |         downcasted = int120(value);
+  882 |     |         if (downcasted != value) {
+  883 |     |             revert SafeCastOverflowedIntDowncast(120, value);
+  884 |     |         }
+  885 |     |     }
+  886 |     | 
+  887 |     |     /**
+  888 |     |      * @dev Returns the downcasted int112 from int256, reverting on
+  889 |     |      * overflow (when the input is less than smallest int112 or
+  890 |     |      * greater than largest int112).
+  891 |     |      *
+  892 |     |      * Counterpart to Solidity's `int112` operator.
+  893 |     |      *
+  894 |     |      * Requirements:
+  895 |     |      *
+  896 |     |      * - input must fit into 112 bits
+  897 |     |      */
+  898 |     |     function toInt112(int256 value) internal pure returns (int112 downcasted) {
+  899 |     |         downcasted = int112(value);
+  900 |     |         if (downcasted != value) {
+  901 |     |             revert SafeCastOverflowedIntDowncast(112, value);
+  902 |     |         }
+  903 |     |     }
+  904 |     | 
+  905 |     |     /**
+  906 |     |      * @dev Returns the downcasted int104 from int256, reverting on
+  907 |     |      * overflow (when the input is less than smallest int104 or
+  908 |     |      * greater than largest int104).
+  909 |     |      *
+  910 |     |      * Counterpart to Solidity's `int104` operator.
+  911 |     |      *
+  912 |     |      * Requirements:
+  913 |     |      *
+  914 |     |      * - input must fit into 104 bits
+  915 |     |      */
+  916 |     |     function toInt104(int256 value) internal pure returns (int104 downcasted) {
+  917 |     |         downcasted = int104(value);
+  918 |     |         if (downcasted != value) {
+  919 |     |             revert SafeCastOverflowedIntDowncast(104, value);
+  920 |     |         }
+  921 |     |     }
+  922 |     | 
+  923 |     |     /**
+  924 |     |      * @dev Returns the downcasted int96 from int256, reverting on
+  925 |     |      * overflow (when the input is less than smallest int96 or
+  926 |     |      * greater than largest int96).
+  927 |     |      *
+  928 |     |      * Counterpart to Solidity's `int96` operator.
+  929 |     |      *
+  930 |     |      * Requirements:
+  931 |     |      *
+  932 |     |      * - input must fit into 96 bits
+  933 |     |      */
+  934 |     |     function toInt96(int256 value) internal pure returns (int96 downcasted) {
+  935 |     |         downcasted = int96(value);
+  936 |     |         if (downcasted != value) {
+  937 |     |             revert SafeCastOverflowedIntDowncast(96, value);
+  938 |     |         }
+  939 |     |     }
+  940 |     | 
+  941 |     |     /**
+  942 |     |      * @dev Returns the downcasted int88 from int256, reverting on
+  943 |     |      * overflow (when the input is less than smallest int88 or
+  944 |     |      * greater than largest int88).
+  945 |     |      *
+  946 |     |      * Counterpart to Solidity's `int88` operator.
+  947 |     |      *
+  948 |     |      * Requirements:
+  949 |     |      *
+  950 |     |      * - input must fit into 88 bits
+  951 |     |      */
+  952 |     |     function toInt88(int256 value) internal pure returns (int88 downcasted) {
+  953 |     |         downcasted = int88(value);
+  954 |     |         if (downcasted != value) {
+  955 |     |             revert SafeCastOverflowedIntDowncast(88, value);
+  956 |     |         }
+  957 |     |     }
+  958 |     | 
+  959 |     |     /**
+  960 |     |      * @dev Returns the downcasted int80 from int256, reverting on
+  961 |     |      * overflow (when the input is less than smallest int80 or
+  962 |     |      * greater than largest int80).
+  963 |     |      *
+  964 |     |      * Counterpart to Solidity's `int80` operator.
+  965 |     |      *
+  966 |     |      * Requirements:
+  967 |     |      *
+  968 |     |      * - input must fit into 80 bits
+  969 |     |      */
+  970 |     |     function toInt80(int256 value) internal pure returns (int80 downcasted) {
+  971 |     |         downcasted = int80(value);
+  972 |     |         if (downcasted != value) {
+  973 |     |             revert SafeCastOverflowedIntDowncast(80, value);
+  974 |     |         }
+  975 |     |     }
+  976 |     | 
+  977 |     |     /**
+  978 |     |      * @dev Returns the downcasted int72 from int256, reverting on
+  979 |     |      * overflow (when the input is less than smallest int72 or
+  980 |     |      * greater than largest int72).
+  981 |     |      *
+  982 |     |      * Counterpart to Solidity's `int72` operator.
+  983 |     |      *
+  984 |     |      * Requirements:
+  985 |     |      *
+  986 |     |      * - input must fit into 72 bits
+  987 |     |      */
+  988 |     |     function toInt72(int256 value) internal pure returns (int72 downcasted) {
+  989 |     |         downcasted = int72(value);
+  990 |     |         if (downcasted != value) {
+  991 |     |             revert SafeCastOverflowedIntDowncast(72, value);
+  992 |     |         }
+  993 |     |     }
+  994 |     | 
+  995 |     |     /**
+  996 |     |      * @dev Returns the downcasted int64 from int256, reverting on
+  997 |     |      * overflow (when the input is less than smallest int64 or
+  998 |     |      * greater than largest int64).
+  999 |     |      *
+ 1000 |     |      * Counterpart to Solidity's `int64` operator.
+ 1001 |     |      *
+ 1002 |     |      * Requirements:
+ 1003 |     |      *
+ 1004 |     |      * - input must fit into 64 bits
+ 1005 |     |      */
+ 1006 |     |     function toInt64(int256 value) internal pure returns (int64 downcasted) {
+ 1007 |     |         downcasted = int64(value);
+ 1008 |     |         if (downcasted != value) {
+ 1009 |     |             revert SafeCastOverflowedIntDowncast(64, value);
+ 1010 |     |         }
+ 1011 |     |     }
+ 1012 |     | 
+ 1013 |     |     /**
+ 1014 |     |      * @dev Returns the downcasted int56 from int256, reverting on
+ 1015 |     |      * overflow (when the input is less than smallest int56 or
+ 1016 |     |      * greater than largest int56).
+ 1017 |     |      *
+ 1018 |     |      * Counterpart to Solidity's `int56` operator.
+ 1019 |     |      *
+ 1020 |     |      * Requirements:
+ 1021 |     |      *
+ 1022 |     |      * - input must fit into 56 bits
+ 1023 |     |      */
+ 1024 |     |     function toInt56(int256 value) internal pure returns (int56 downcasted) {
+ 1025 |     |         downcasted = int56(value);
+ 1026 |     |         if (downcasted != value) {
+ 1027 |     |             revert SafeCastOverflowedIntDowncast(56, value);
+ 1028 |     |         }
+ 1029 |     |     }
+ 1030 |     | 
+ 1031 |     |     /**
+ 1032 |     |      * @dev Returns the downcasted int48 from int256, reverting on
+ 1033 |     |      * overflow (when the input is less than smallest int48 or
+ 1034 |     |      * greater than largest int48).
+ 1035 |     |      *
+ 1036 |     |      * Counterpart to Solidity's `int48` operator.
+ 1037 |     |      *
+ 1038 |     |      * Requirements:
+ 1039 |     |      *
+ 1040 |     |      * - input must fit into 48 bits
+ 1041 |     |      */
+ 1042 |     |     function toInt48(int256 value) internal pure returns (int48 downcasted) {
+ 1043 |     |         downcasted = int48(value);
+ 1044 |     |         if (downcasted != value) {
+ 1045 |     |             revert SafeCastOverflowedIntDowncast(48, value);
+ 1046 |     |         }
+ 1047 |     |     }
+ 1048 |     | 
+ 1049 |     |     /**
+ 1050 |     |      * @dev Returns the downcasted int40 from int256, reverting on
+ 1051 |     |      * overflow (when the input is less than smallest int40 or
+ 1052 |     |      * greater than largest int40).
+ 1053 |     |      *
+ 1054 |     |      * Counterpart to Solidity's `int40` operator.
+ 1055 |     |      *
+ 1056 |     |      * Requirements:
+ 1057 |     |      *
+ 1058 |     |      * - input must fit into 40 bits
+ 1059 |     |      */
+ 1060 |     |     function toInt40(int256 value) internal pure returns (int40 downcasted) {
+ 1061 |     |         downcasted = int40(value);
+ 1062 |     |         if (downcasted != value) {
+ 1063 |     |             revert SafeCastOverflowedIntDowncast(40, value);
+ 1064 |     |         }
+ 1065 |     |     }
+ 1066 |     | 
+ 1067 |     |     /**
+ 1068 |     |      * @dev Returns the downcasted int32 from int256, reverting on
+ 1069 |     |      * overflow (when the input is less than smallest int32 or
+ 1070 |     |      * greater than largest int32).
+ 1071 |     |      *
+ 1072 |     |      * Counterpart to Solidity's `int32` operator.
+ 1073 |     |      *
+ 1074 |     |      * Requirements:
+ 1075 |     |      *
+ 1076 |     |      * - input must fit into 32 bits
+ 1077 |     |      */
+ 1078 |     |     function toInt32(int256 value) internal pure returns (int32 downcasted) {
+ 1079 |     |         downcasted = int32(value);
+ 1080 |     |         if (downcasted != value) {
+ 1081 |     |             revert SafeCastOverflowedIntDowncast(32, value);
+ 1082 |     |         }
+ 1083 |     |     }
+ 1084 |     | 
+ 1085 |     |     /**
+ 1086 |     |      * @dev Returns the downcasted int24 from int256, reverting on
+ 1087 |     |      * overflow (when the input is less than smallest int24 or
+ 1088 |     |      * greater than largest int24).
+ 1089 |     |      *
+ 1090 |     |      * Counterpart to Solidity's `int24` operator.
+ 1091 |     |      *
+ 1092 |     |      * Requirements:
+ 1093 |     |      *
+ 1094 |     |      * - input must fit into 24 bits
+ 1095 |     |      */
+ 1096 |     |     function toInt24(int256 value) internal pure returns (int24 downcasted) {
+ 1097 |     |         downcasted = int24(value);
+ 1098 |     |         if (downcasted != value) {
+ 1099 |     |             revert SafeCastOverflowedIntDowncast(24, value);
+ 1100 |     |         }
+ 1101 |     |     }
+ 1102 |     | 
+ 1103 |     |     /**
+ 1104 |     |      * @dev Returns the downcasted int16 from int256, reverting on
+ 1105 |     |      * overflow (when the input is less than smallest int16 or
+ 1106 |     |      * greater than largest int16).
+ 1107 |     |      *
+ 1108 |     |      * Counterpart to Solidity's `int16` operator.
+ 1109 |     |      *
+ 1110 |     |      * Requirements:
+ 1111 |     |      *
+ 1112 |     |      * - input must fit into 16 bits
+ 1113 |     |      */
+ 1114 |     |     function toInt16(int256 value) internal pure returns (int16 downcasted) {
+ 1115 |     |         downcasted = int16(value);
+ 1116 |     |         if (downcasted != value) {
+ 1117 |     |             revert SafeCastOverflowedIntDowncast(16, value);
+ 1118 |     |         }
+ 1119 |     |     }
+ 1120 |     | 
+ 1121 |     |     /**
+ 1122 |     |      * @dev Returns the downcasted int8 from int256, reverting on
+ 1123 |     |      * overflow (when the input is less than smallest int8 or
+ 1124 |     |      * greater than largest int8).
+ 1125 |     |      *
+ 1126 |     |      * Counterpart to Solidity's `int8` operator.
+ 1127 |     |      *
+ 1128 |     |      * Requirements:
+ 1129 |     |      *
+ 1130 |     |      * - input must fit into 8 bits
+ 1131 |     |      */
+ 1132 |     |     function toInt8(int256 value) internal pure returns (int8 downcasted) {
+ 1133 |     |         downcasted = int8(value);
+ 1134 |     |         if (downcasted != value) {
+ 1135 |     |             revert SafeCastOverflowedIntDowncast(8, value);
+ 1136 |     |         }
+ 1137 |     |     }
+ 1138 |     | 
+ 1139 |     |     /**
+ 1140 |     |      * @dev Converts an unsigned uint256 into a signed int256.
+ 1141 |     |      *
+ 1142 |     |      * Requirements:
+ 1143 |     |      *
+ 1144 |     |      * - input must be less than or equal to maxInt256.
+ 1145 |     |      */
+ 1146 |     |     function toInt256(uint256 value) internal pure returns (int256) {
+ 1147 |     |         // Note: Unsafe cast below is okay because `type(int256).max` is guaranteed to be positive
+ 1148 |     |         if (value > uint256(type(int256).max)) {
+ 1149 |     |             revert SafeCastOverflowedUintToInt(value);
+ 1150 |     |         }
+ 1151 |     |         return int256(value);
+ 1152 |     |     }
+ 1153 |     | 
+ 1154 |     |     /**
+ 1155 |     |      * @dev Cast a boolean (false or true) to a uint256 (0 or 1) with no jump.
+ 1156 |     |      */
+ 1157 |     |     function toUint(bool b) internal pure returns (uint256 u) {
+ 1158 |     |         assembly ("memory-safe") {
+ 1159 |     |             u := iszero(iszero(b))
+ 1160 |     |         }
+ 1161 |     |     }
+ 1162 |     | }
+ 1163 |     | 
+
+/var/home/robTheBob/gits/sec_proj/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol
+  1 |     | // SPDX-License-Identifier: MIT
+  2 |     | // OpenZeppelin Contracts (last updated v5.1.0) (utils/math/SignedMath.sol)
+  3 |     | 
+  4 |     | pragma solidity ^0.8.20;
+  5 |     | 
+  6 |     | import {SafeCast} from "./SafeCast.sol";
+  7 |     | 
+  8 |     | /**
+  9 |     |  * @dev Standard signed math utilities missing in the Solidity language.
+ 10 |     |  */
+ 11 |     | library SignedMath {
+ 12 |     |     /**
+ 13 |     |      * @dev Branchless ternary evaluation for `a ? b : c`. Gas costs are constant.
+ 14 |     |      *
+ 15 |     |      * IMPORTANT: This function may reduce bytecode size and consume less gas when used standalone.
+ 16 |     |      * However, the compiler may optimize Solidity ternary operations (i.e. `a ? b : c`) to only compute
+ 17 |     |      * one branch when needed, making this function more expensive.
+ 18 |     |      */
+ 19 |     |     function ternary(bool condition, int256 a, int256 b) internal pure returns (int256) {
+ 20 |     |         unchecked {
+ 21 |     |             // branchless ternary works because:
+ 22 |     |             // b ^ (a ^ b) == a
+ 23 |     |             // b ^ 0 == b
+ 24 |     |             return b ^ ((a ^ b) * int256(SafeCast.toUint(condition)));
+ 25 |     |         }
+ 26 |     |     }
+ 27 |     | 
+ 28 |     |     /**
+ 29 |     |      * @dev Returns the largest of two signed numbers.
+ 30 |     |      */
+ 31 |     |     function max(int256 a, int256 b) internal pure returns (int256) {
+ 32 |     |         return ternary(a > b, a, b);
+ 33 |     |     }
+ 34 |     | 
+ 35 |     |     /**
+ 36 |     |      * @dev Returns the smallest of two signed numbers.
+ 37 |     |      */
+ 38 |     |     function min(int256 a, int256 b) internal pure returns (int256) {
+ 39 |     |         return ternary(a < b, a, b);
+ 40 |     |     }
+ 41 |     | 
+ 42 |     |     /**
+ 43 |     |      * @dev Returns the average of two signed numbers without overflow.
+ 44 |     |      * The result is rounded towards zero.
+ 45 |     |      */
+ 46 |     |     function average(int256 a, int256 b) internal pure returns (int256) {
+ 47 |     |         // Formula from the book "Hacker's Delight"
+ 48 |     |         int256 x = (a & b) + ((a ^ b) >> 1);
+ 49 |     |         return x + (int256(uint256(x) >> 255) & (a ^ b));
+ 50 |     |     }
+ 51 |     | 
+ 52 |     |     /**
+ 53 |     |      * @dev Returns the absolute unsigned value of a signed value.
+ 54 |     |      */
+ 55 |     |     function abs(int256 n) internal pure returns (uint256) {
+ 56 |     |         unchecked {
+ 57 |     |             // Formula from the "Bit Twiddling Hacks" by Sean Eron Anderson.
+ 58 |     |             // Since `n` is a signed integer, the generated bytecode will use the SAR opcode to perform the right shift,
+ 59 |     |             // taking advantage of the most significant (or "sign" bit) in two's complement representation.
+ 60 |     |             // This opcode adds new most significant bits set to the value of the previous most significant bit. As a result,
+ 61 |     |             // the mask will either be `bytes32(0)` (if n is positive) or `~bytes32(0)` (if n is negative).
+ 62 |     |             int256 mask = n >> 255;
+ 63 |     | 
+ 64 |     |             // A `bytes32(0)` mask leaves the input unchanged, while a `~bytes32(0)` mask complements it.
+ 65 |     |             return uint256((n + mask) ^ mask);
+ 66 |     |         }
+ 67 |     |     }
+ 68 |     | }
+ 69 |     | 
+
+/var/home/robTheBob/gits/sec_proj/src/ERC165.sol
+  1 |     | // SPDX-License-Identifier: Unlicense
+  2 |     | 
+  3 |     | pragma solidity ^0.8.22;
+  4 |     | 
+  5 |     | interface ERC165 {
+  6 |     |     /// @notice Query if a contract implements an interface
+  7 |     |     /// @param interfaceID The interface identifier, as specified in ERC-165
+  8 |     |     /// @dev Interface identification is specified in ERC-165. This function
+  9 |     |     ///  uses less than 30,000 gas.
+ 10 |     |     /// @return `true` if the contract implements `interfaceID` and
+ 11 |     |     ///  `interfaceID` is not 0xffffffff, `false` otherwise
+ 12 |     |     function supportsInterface(bytes4 interfaceID) external view returns (bool);
+ 13 |     | }
+ 14 |     | 
+ 15 |     | contract ERC165Query {
+ 16 | *   |     bytes4 constant InvalidID = 0xffffffff;
+ 17 | *   |     bytes4 constant ERC165ID = 0x01ffc9a7;
+ 18 |     | 
+ 19 | *   |     function doesContractImplementInterface(address _contract, bytes4 _interfaceId) internal view returns (bool) {
+ 20 | *   |         uint256 success;
+ 21 | *   |         uint256 result;
+ 22 |     | 
+ 23 | *   |         (success, result) = noThrowCall(_contract, ERC165ID);
+ 24 | *   |         if ((success == 0) || (result == 0)) {
+ 25 | *   |             return false;
+ 26 |     |         }
+ 27 |     | 
+ 28 | *   |         (success, result) = noThrowCall(_contract, InvalidID);
+ 29 | *   |         if ((success == 0) || (result != 0)) {
+ 30 | *   |             return false;
+ 31 |     |         }
+ 32 |     | 
+ 33 | *   |         (success, result) = noThrowCall(_contract, _interfaceId);
+ 34 | *   |         if ((success == 1) && (result == 1)) {
+ 35 | *   |             return true;
+ 36 |     |         }
+ 37 |     |         return false;
+ 38 |     |     }
+ 39 |     | 
+ 40 | *   |     function noThrowCall(address _contract, bytes4 _interfaceId)
+ 41 |     |         internal
+ 42 |     |         view
+ 43 | *   |         returns (uint256 success, uint256 result)
+ 44 |     |     {
+ 45 | *   |         bytes4 erc165ID = ERC165ID;
+ 46 |     | 
+ 47 | *   |         assembly {
+ 48 | *   |             let x := mload(0x40) // Find empty storage location using "free memory pointer"
+ 49 | *   |             mstore(x, erc165ID) // Place signature at beginning of empty storage
+ 50 | *   |             mstore(add(x, 0x04), _interfaceId) // Place first argument directly next to signature
+ 51 |     | 
+ 52 | *   |             success := staticcall(
+ 53 | *   |                 30000, // 30k gas
+ 54 | *   |                 _contract, // To addr
+ 55 | *   |                 x, // Inputs are stored at location x
+ 56 | *   |                 0x24, // Inputs are 36 bytes long
+ 57 | *   |                 x, // Store output over input (saves space)
+ 58 | *   |                 0x20
+ 59 |     |             ) // Outputs are 32 bytes long
+ 60 |     | 
+ 61 | *   |             result := mload(x) // Load the result
+ 62 |     |         }
+ 63 |     |     }
+ 64 |     | }
+ 65 |     | 
+
+/var/home/robTheBob/gits/sec_proj/src/Lottery.sol
+  1 |     | pragma solidity ^0.8.22;
+  2 |     | // SPDX-License-Identifier: UNLICENSED
+  3 |     | import "./Taxpayer.sol";
+  4 |     | 
+  5 |     | contract Lottery {
+  6 |     |     address owner;
+  7 |     |     mapping(address => bytes32) commits;
+  8 |     |     mapping(address => uint256) reveals;
+  9 |     |     address[] revealed;
+ 10 |     | 
+ 11 |     |     uint256 startTime;
+ 12 |     |     uint256 revealTime;
+ 13 |     |     uint256 endTime;
+ 14 |     |     uint256 period;
+ 15 |     |     bool iscontract;
+ 16 |     | 
+ 17 |     |     // Initialize the registry with the lottery period.
+ 18 |     |     constructor(uint256 p) {
+ 19 |     |         period = p;
+ 20 |     |         startTime = 0;
+ 21 |     |         endTime = 0;
+ 22 |     |         iscontract = true;
+ 23 |     |     }
+ 24 |     | 
+ 25 |     |     //If the lottery has not started, anyone can invoke a lottery.
+ 26 |     |     function startLottery() public {
+ 27 |     |         require(startTime == 0);
+ 28 |     |         //startTime current time. Users send their committed value
+ 29 |     |         startTime = block.timestamp;
+ 30 |     |         //revealTime  time for revealing. User reveal their value
+ 31 |     |         revealTime = startTime + period;
+ 32 |     |         //endTime a winner can be computed
+ 33 |     |         endTime = revealTime + period;
+ 34 |     |     }
+ 35 |     | 
+ 36 |     |     //A taxpayer send his own commitment.
+ 37 |     |     function commit(bytes32 y) public {
+ 38 |     |         require(block.timestamp >= startTime);
+ 39 |     |         commits[msg.sender] = y;
+ 40 |     |     }
+ 41 |     | 
+ 42 |     |     //A valid taxpayer who sent his own commitment, sends the revealing value.
+ 43 |     |     function reveal(uint256 rev) public {
+ 44 |     |         require(block.timestamp >= revealTime);
+ 45 |     |         require(keccak256(abi.encode(rev)) == commits[msg.sender]);
+ 46 |     |         revealed.push(msg.sender);
+ 47 |     |         reveals[msg.sender] = uint256(rev);
+ 48 |     |     }
+ 49 |     | 
+ 50 |     |     //Ends the lottery and compute the winner.
+ 51 |     |     function endLottery() public {
+ 52 |     |         require(block.timestamp >= endTime);
+ 53 |     |         uint256 total = 0;
+ 54 |     |         for (uint256 i = 0; i < revealed.length; i++) {
+ 55 |     |             total += reveals[revealed[i]];
+ 56 |     |         }
+ 57 |     |         Taxpayer(revealed[total % revealed.length]).setTaxAllowance(7000);
+ 58 |     |         startTime = 0;
+ 59 |     |         revealTime = 0;
+ 60 |     |         endTime = 0;
+ 61 |     |     }
+ 62 |     | 
+ 63 |     |     function isContract() public view returns (bool) {
+ 64 |     |         return iscontract;
+ 65 |     |     }
+ 66 |     | }
+ 67 |     | 
+
+/var/home/robTheBob/gits/sec_proj/src/Taxpayer.sol
+   1 |     | pragma solidity ^0.8.22;
+   2 |     | // SPDX-License-Identifier: UNLICENSED
+   3 |     | 
+   4 |     | import "./Lottery.sol";
+   5 |     | import "./ERC165.sol";
+   6 |     | 
+   7 |     | interface ITaxpayer is ERC165 {
+   8 |     |     // this function was added and is different than the original code since it lacked getters
+   9 |     |     function get_spouse() external view returns (Taxpayer);
+  10 |     | 
+  11 |     |     //We require new_spouse != address(0);
+  12 |     |     function marry(address new_spouse) external;
+  13 |     | 
+  14 |     |     function divorce() external;
+  15 |     | 
+  16 |     |     /* Transfer part of tax allowance to own spouse */
+  17 |     |     function transferAllowance(uint256 change) external;
+  18 |     | 
+  19 |     |     function haveBirthday() external;
+  20 |     | 
+  21 |     |     function setTaxAllowance(uint256 ta) external;
+  22 |     | 
+  23 |     |     function getPoolAllowance() external view returns (uint256);
+  24 |     | 
+  25 |     |     function getTaxAllowance() external view returns (uint256);
+  26 |     | 
+  27 |     |     // function isContract() external view returns (bool);
+  28 |     | 
+  29 |     |     function joinLottery(address lot, uint256 r) external;
+  30 |     |     function marry_me(Taxpayer _spouse) external;
+  31 |     |     function revealLottery(address lot, uint256 r) external;
+  32 |     | }
+  33 |     | 
+  34 | *r  | contract Taxpayer is ITaxpayer, ERC165Query {
+  35 |     |     event AssertionFailed(string reason);
+  36 |     |     uint256 age;
+  37 |     |     bool isMarried;
+  38 |     | 
+  39 |     |     bool iscontract;
+  40 |     | 
+  41 |     |     /* Reference to spouse if person is married, address(0) otherwise */
+  42 |     |     address spouse;
+  43 |     | 
+  44 |     |     address parent1;
+  45 |     |     address parent2;
+  46 |     | 
+  47 |     |     /* Constant default income tax allowance */
+  48 | *   |     uint256 constant DEFAULT_ALLOWANCE = 5000;
+  49 |     | 
+  50 |     |     /* Constant income tax allowance for Older Taxpayers over 65 */
+  51 |     |     uint256 constant ALLOWANCE_OAP = 7000;
+  52 |     | 
+  53 |     |     /* Income tax allowance */
+  54 |     |     uint256 tax_allowance;
+  55 |     |     uint256 pool_tax_allowance;
+  56 |     |     uint256 income;
+  57 |     | 
+  58 |     |     uint256 rev;
+  59 |     | 
+  60 |     |     //Parents are taxpayers
+  61 | *   |     constructor(address p1, address p2) {
+  62 | *   |         age = 0;
+  63 | *   |         isMarried = false;
+  64 | *   |         parent1 = p1;
+  65 | *   |         parent2 = p2;
+  66 | *   |         spouse = address(0);
+  67 | *   |         income = 0;
+  68 | *   |         tax_allowance = DEFAULT_ALLOWANCE;
+  69 | *   |         pool_tax_allowance = DEFAULT_ALLOWANCE;
+  70 |     |         // Useless if we implement the ERC165 iscontract = true;
+  71 |     |     }
+  72 |     | 
+  73 | *   |     function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
+  74 | *   |         return interfaceID == type(ERC165).interfaceId || interfaceID == type(ITaxpayer).interfaceId;
+  75 |     |     }
+  76 |     | 
+  77 |     |     // this function was added and is different than the original code since it lacked getters
+  78 | *   |     function get_spouse() public view returns (Taxpayer) {
+  79 |     |         // require(this.doesContractImplementInterface(spouse, type(ITaxpayer).interfaceId));
+  80 | *   |         return Taxpayer(spouse);
+  81 |     |     }
+  82 |     | 
+  83 | *   |     function marry_me(Taxpayer _spouse) public {
+  84 |     |         // emit AssertionFailed("Marry_me NONO");
+  85 | *r  |         require(spouse == address(0));
+  86 | *r  |         require(msg.sender == address(_spouse));
+  87 | *r  |         require(doesContractImplementInterface(address(_spouse), type(ITaxpayer).interfaceId));
+  88 |     | 
+  89 |     |         // if (
+  90 |     |         //     (spouse != address(0)) || (msg.sender != _spouse)
+  91 |     |         //         || (!this.doesContractImplementInterface(_spouse, type(ITaxpayer).interfaceId))
+  92 |     |         // ) return;
+  93 | *   |         spouse = address(_spouse);
+  94 | *   |         pool_tax_allowance += Taxpayer(spouse).getTaxAllowance();
+  95 |     |     }
+  96 |     | 
+  97 |     |     //We require new_spouse != address(0);
+  98 | *   |     function marry(address new_spouse) public {
+  99 |     |         // emit AssertionFailed("Marry nono");
+ 100 | *r  |         require(doesContractImplementInterface(new_spouse, type(ITaxpayer).interfaceId));
+ 101 | *r  |         require(spouse == address(0));
+ 102 | *   |         require(new_spouse != address(0));
+ 103 |     | 
+ 104 | *   |         spouse = new_spouse;
+ 105 | *   |         pool_tax_allowance += Taxpayer(spouse).getTaxAllowance();
+ 106 |     |         // isMarried = true;
+ 107 | *r  |         Taxpayer(new_spouse).marry_me(this);
+ 108 |     |         // assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
+ 109 | *   |         if (address(this) != address(Taxpayer(new_spouse).get_spouse())) {
+ 110 |     |             emit AssertionFailed("Post condition violated: You did not marry your spouse");
+ 111 |     |         }
+ 112 |     |     }
+ 113 |     | 
+ 114 | *   |     function divorce_me() public {
+ 115 | *r  |         require(spouse != address(0));
+ 116 | *r  |         require(msg.sender == spouse);
+ 117 | *   |         require(address(Taxpayer(spouse).get_spouse()) == address(0));
+ 118 | *   |         spouse = address(0);
+ 119 | *   |         tax_allowance = DEFAULT_ALLOWANCE;
+ 120 | *   |         pool_tax_allowance = DEFAULT_ALLOWANCE;
+ 121 |     |     }
+ 122 |     | 
+ 123 | *   |     function divorce() public {
+ 124 | *r  |         require(spouse != address(0));
+ 125 | *   |         address tmp = spouse;
+ 126 | *   |         spouse = address(0);
+ 127 | *   |         tax_allowance = DEFAULT_ALLOWANCE;
+ 128 | *   |         pool_tax_allowance = DEFAULT_ALLOWANCE;
+ 129 | *   |         Taxpayer(tmp).divorce_me();
+ 130 |     |         // isMarried = false;
+ 131 |     |     }
+ 132 |     | 
+ 133 |     |     /* Transfer part of tax allowance to own spouse */
+ 134 | *   |     function transferAllowance(uint256 change) public {
+ 135 | *r  |         require(spouse != address(0));
+ 136 | *   |         Taxpayer sp = Taxpayer(address(spouse));
+ 137 | *   |         uint256 sp_tax_allowance = sp.getTaxAllowance();
+ 138 |     | 
+ 139 | *r  |         require(sp_tax_allowance + tax_allowance == (pool_tax_allowance));
+ 140 | *   |         tax_allowance = tax_allowance - change;
+ 141 | *   |         sp.setTaxAllowance(sp.getTaxAllowance() + change);
+ 142 |     |         // we need to make the DEFAULT_ALLOWANCE dynamic
+ 143 | *   |         if (sp.getTaxAllowance() + tax_allowance != (pool_tax_allowance)) {
+ 144 |     |             emit AssertionFailed("You tried to cheat the system, PREPARE TO DIE!!!");
+ 145 |     |         }
+ 146 |     |     }
+ 147 |     | 
+ 148 | *   |     function getPoolAllowance() public view returns (uint256) {
+ 149 | *   |         return pool_tax_allowance;
+ 150 |     |     }
+ 151 |     | 
+ 152 | *   |     function haveBirthday() public {
+ 153 | *   |         age++;
+ 154 | *   |         if (age == 65) {
+ 155 |     |             tax_allowance = tax_allowance + 2000;
+ 156 |     |             pool_tax_allowance = pool_tax_allowance + 2000;
+ 157 |     |         }
+ 158 |     |     }
+ 159 |     | 
+ 160 | *   |     function setTaxAllowance(uint256 ta) public {
+ 161 |     |         // require(doesContractImplementInterface(msg.sender, type(ITaxpayer).interfaceId));
+ 162 |     |         // require(spouse != address(0));
+ 163 |     |         // require(msg.sender == spouse);
+ 164 |     |         // This assures me that my spouse actually called the function
+ 165 |     |         // require(Taxpayer(spouse).getTaxAllowance() + ta == (pool_tax_allowance));
+ 166 |     |         // We should think about the lottery require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
+ 167 | *   |         tax_allowance = ta;
+ 168 |     |     }
+ 169 |     | 
+ 170 | *   |     function getTaxAllowance() public view returns (uint256) {
+ 171 | *   |         return tax_allowance;
+ 172 |     |     }
+ 173 |     | 
+ 174 |     |     // function isContract() public view returns (bool) {
+ 175 |     |     //     return iscontract;
+ 176 |     |     // }
+ 177 |     | 
+ 178 | *   |     function joinLottery(address lot, uint256 r) public {
+ 179 | *   |         Lottery l = Lottery(lot);
+ 180 | *r  |         l.commit(keccak256(abi.encode(r)));
+ 181 |     |         rev = r;
+ 182 |     |     }
+ 183 |     | 
+ 184 | *   |     function revealLottery(address lot, uint256 r) public {
+ 185 | *   |         Lottery l = Lottery(lot);
+ 186 | *r  |         l.reveal(r);
+ 187 |     |         rev = 0;
+ 188 |     |     }
+ 189 |     | }
+ 190 |     | 
+
+/var/home/robTheBob/gits/sec_proj/test/testtaxpayer.sol
+  1 |     | // SPDX-License-Identifier: Unlicense
+  2 |     | pragma solidity ^0.8.22;
+  3 |     | import "../src/Taxpayer.sol";
+  4 |     | import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+  5 |     | 
+  6 | *r  | contract Test {
+  7 |     |     event AssertionFailed(string reason);
+  8 |     |     event Message(string msg);
+  9 |     | 
+ 10 |     |     using Strings for uint256;
+ 11 |     | 
+ 12 |     |     Taxpayer[] taxpayer;
+ 13 | *   |     uint256 internal constant N_OF_TAXPAYER = 10;
+ 14 |     | 
+ 15 | *   |     constructor() {
+ 16 | *   |         for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
+ 17 | *   |             taxpayer.push(new Taxpayer(address(0), address(0)));
+ 18 |     |         }
+ 19 |     |         // taxpayer[0].marry(address(taxpayer[1]));
+ 20 | *   |         taxpayer[0].setTaxAllowance(1000000);
+ 21 |     |     }
+ 22 |     | 
+ 23 |     |     function createOldTaxpayer() internal returns (Taxpayer) {}
+ 24 |     | 
+ 25 | *   |     function checkMarried(Taxpayer t1) internal {
+ 26 | *   |         Taxpayer spouse = t1.get_spouse();
+ 27 | *   |         if (address(spouse) == address(0)) return;
+ 28 |     |         // emit AssertionFailed("The spouse is different");
+ 29 |     |         // assert(address(spouse.get_spouse()) == address(t1));
+ 30 | *   |         if (address(spouse.get_spouse()) != address(t1)) {
+ 31 |     |             emit AssertionFailed("The spouse is different");
+ 32 |     |         }
+ 33 |     |     }
+ 34 |     | 
+ 35 | *   |     function echidna_are_both_married() public {
+ 36 | *   |         for (uint256 index = 0; index < taxpayer.length; index++) {
+ 37 | *   |             emit Message(Strings.toString(index));
+ 38 | *   |             checkMarried(taxpayer[index]);
+ 39 |     |         }
+ 40 |     |     }
+ 41 |     | 
+ 42 | *   |     function checkAllowance(Taxpayer t1) internal {
+ 43 | *   |         if (t1.getTaxAllowance() > t1.getPoolAllowance()) {
+ 44 | *   |             emit AssertionFailed("Too much money saved in taxes");
+ 45 |     |         }
+ 46 |     |     }
+ 47 |     | 
+ 48 | *   |     function echidna_is_tax_allowance_good() public {
+ 49 | *   |         for (uint256 index = 0; index < taxpayer.length; index++) {
+ 50 | *   |             emit Message(Strings.toString(index));
+ 51 | *   |             checkAllowance(taxpayer[index]);
+ 52 |     |         }
+ 53 |     |     }
+ 54 |     | 
+ 55 |     |     function isMarriedGood(Taxpayer t1) internal view returns (bool ret) {
+ 56 |     |         Taxpayer spouse = t1.get_spouse();
+ 57 |     |         if (address(spouse) == address(0)) {
+ 58 |     |             return true;
+ 59 |     |         }
+ 60 |     |         ret = address(spouse.get_spouse()) == address(t1);
+ 61 |     |     }
+ 62 |     | 
+ 63 |     |     function invariant_are_both_married() public view returns (bool) {
+ 64 |     |         for (uint256 index = 0; index < taxpayer.length; index++) {
+ 65 |     |             if (!isMarriedGood(taxpayer[index])) {
+ 66 |     |                 return false;
+ 67 |     |             }
+ 68 |     |         }
+ 69 |     |         return true;
+ 70 |     |     }
+ 71 |     | 
+ 72 |     |     // function invariant_no_pedo() public view returns (bool) {}
+ 73 |     | }
+ 74 |     | 
+ 75 |     | 
+

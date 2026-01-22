@@ -12,11 +12,12 @@ contract Test {
     Taxpayer[] taxpayer;
     uint256 internal constant N_OF_TAXPAYER = 10;
 
-    constructor() public {
+    constructor() {
         for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
             taxpayer.push(new Taxpayer(address(0), address(0)));
         }
         // taxpayer[0].marry(address(taxpayer[1]));
+        // taxpayer[0].setTaxAllowance(1000000);
     }
 
     function createOldTaxpayer() internal returns (Taxpayer) {}
@@ -35,6 +36,29 @@ contract Test {
         for (uint256 index = 0; index < taxpayer.length; index++) {
             emit Message(Strings.toString(index));
             checkMarried(taxpayer[index]);
+        }
+    }
+
+    function checkAllowance(Taxpayer t1) internal {
+        if (t1.getTaxAllowance() > t1.getPoolAllowance()) {
+            emit AssertionFailed("Too much money saved in taxes");
+        }
+        Taxpayer sp = t1.get_spouse();
+
+        if (address(sp) != address(0)) {
+            if (t1.getPoolAllowance() != sp.getPoolAllowance()) {
+                emit AssertionFailed("The pool allowance must be equal for both spouses");
+            }
+            if ((t1.getTaxAllowance() + sp.getTaxAllowance()) > t1.getPoolAllowance()) {
+                emit AssertionFailed("Too much money saved in taxes but both");
+            }
+        }
+    }
+
+    function echidna_is_tax_allowance_good() public {
+        for (uint256 index = 0; index < taxpayer.length; index++) {
+            emit Message(Strings.toString(index));
+            checkAllowance(taxpayer[index]);
         }
     }
 
