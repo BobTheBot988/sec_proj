@@ -12,6 +12,13 @@ contract Test {
     Taxpayer[] taxpayer;
     uint256 internal constant N_OF_TAXPAYER = 10;
 
+    function forEach(function(Taxpayer) internal a) internal {
+        for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
+            emit Message(Strings.toString(index));
+            a(taxpayer[index]);
+        }
+    }
+
     constructor() {
         for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
             taxpayer.push(new Taxpayer(address(0), address(0)));
@@ -30,11 +37,14 @@ contract Test {
         }
     }
 
+    // function echidna_are_both_married() public {
+    //     for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
+    //         emit Message(Strings.toString(index));
+    //         checkMarried(taxpayer[index]);
+    //     }
+    // }
     function echidna_are_both_married() public {
-        for (uint256 index = 0; index < taxpayer.length; index++) {
-            emit Message(Strings.toString(index));
-            checkMarried(taxpayer[index]);
-        }
+        forEach(checkMarried);
     }
 
     function checkAllowance(Taxpayer t1) internal {
@@ -72,10 +82,7 @@ contract Test {
     }
 
     function echidna_is_aged_tax_allowance_good() public {
-        for (uint256 index = 0; index < taxpayer.length; index++) {
-            emit Message(Strings.toString(index));
-            checkAgeAllowance(taxpayer[index]);
-        }
+        forEach(checkAgeAllowance);
     }
 
     // function echidna_is_tax_allowance_good() public {
