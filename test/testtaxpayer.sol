@@ -21,7 +21,7 @@ contract Test {
 
     constructor() {
         for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
-            taxpayer.push(new Taxpayer(address(0), address(0)));
+            taxpayer.push(new Taxpayer(address(0), address(0), 0));
         }
         // taxpayer[0].marry(address(taxpayer[1]));
         // taxpayer[0].setTaxAllowance(1000000);
@@ -57,7 +57,7 @@ contract Test {
             if (t1.getPoolAllowance() != sp.getPoolAllowance()) {
                 emit AssertionFailed("The pool allowance must be equal for both spouses");
             }
-            if ((t1.getTaxAllowance() + sp.getTaxAllowance()) > t1.getPoolAllowance()) {
+            if ((t1.getTaxAllowance() + sp.getTaxAllowance()) != t1.getPoolAllowance()) {
                 emit AssertionFailed("Too much money saved in taxes naughty couple");
             }
         }
@@ -66,19 +66,27 @@ contract Test {
     function checkAgeAllowance(Taxpayer t1) internal {
         uint256 my_mod = 0;
         uint256 my_num = 5000;
-        if (t1.getAge() >= oldAge) {
+        if (t1.getYearsSinceBirth() >= oldAge && t1.get_counter()) {
             my_mod += 2000;
         }
+        my_mod += (t1.getLotteryWins() * 2000);
         Taxpayer sp = t1.get_spouse();
         if (address(sp) != address(0)) {
+            // emit AssertionFailed("Married");
             my_num = my_num * 2;
-            if (sp.getAge() >= oldAge) {
+            if (sp.getYearsSinceBirth() >= oldAge && sp.get_counter()) {
                 my_mod += 2000;
             }
+
+            my_mod += (sp.getLotteryWins() * 2000);
         }
         if (t1.getPoolAllowance() != (my_num + my_mod)) {
-            emit AssertionFailed("Suca");
+            emit AssertionFailed(string.concat("The poolTaxAllowance is wrong", Strings.toString(my_num + my_mod)));
         }
+    }
+
+    function echidna_is_tax_allowance_good() public {
+        forEach(checkAllowance);
     }
 
     function echidna_is_aged_tax_allowance_good() public {
