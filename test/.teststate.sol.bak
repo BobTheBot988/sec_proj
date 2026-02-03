@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: unlisenced
+pragma solidity ^0.8.22;
+import "../src/State.sol";
+import "./testtaxpayer.sol";
+import "./testlottery.sol";
+
+contract testsstate {
+    event AssertionFailed(string reason);
+    event Message(string msg);
+    State st = new State();
+    uint256 N_OF_TAXPAYERS = 10;
+    uint16 constant N_OF_ROUNDS = 1000;
+
+    constructor() {
+        for (uint256 index = 0; index < N_OF_ROUNDS; index++) {
+            st.addTaxpayer();
+        }
+    }
+}

@@ -6,18 +6,11 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 contract Test {
     event AssertionFailed(string reason);
     event Message(string msg);
-    uint256 constant oldAge = 1;
+    uint256 constant oldAge = 65;
     using Strings for uint256;
 
     Taxpayer[] taxpayer;
     uint256 internal constant N_OF_TAXPAYER = 10;
-
-    function forEach(function(Taxpayer) internal a) internal {
-        for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
-            emit Message(Strings.toString(index));
-            a(taxpayer[index]);
-        }
-    }
 
     constructor() {
         for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
@@ -25,6 +18,13 @@ contract Test {
         }
         // taxpayer[0].marry(address(taxpayer[1]));
         // taxpayer[0].setTaxAllowance(1000000);
+    }
+
+    function forEach(function(Taxpayer) internal constraint) internal {
+        for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
+            // emit Message(Strings.toString(index));
+            constraint(taxpayer[index]);
+        }
     }
 
     function checkMarried(Taxpayer t1) internal {
@@ -37,13 +37,7 @@ contract Test {
         }
     }
 
-    // function echidna_are_both_married() public {
-    //     for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
-    //         emit Message(Strings.toString(index));
-    //         checkMarried(taxpayer[index]);
-    //     }
-    // }
-    function echidna_are_both_married() public {
+    function invariant_both_married() public {
         forEach(checkMarried);
     }
 
@@ -61,6 +55,10 @@ contract Test {
                 emit AssertionFailed("Too much money saved in taxes naughty couple");
             }
         }
+    }
+
+    function invariant_is_tax_allowance_good() public {
+        forEach(checkAllowance);
     }
 
     function checkAgeAllowance(Taxpayer t1) internal {
@@ -85,11 +83,7 @@ contract Test {
         }
     }
 
-    function echidna_is_tax_allowance_good() public {
-        forEach(checkAllowance);
-    }
-
-    function echidna_is_aged_tax_allowance_good() public {
+    function invariant_is_aged_tax_allowance_good() public {
         forEach(checkAgeAllowance);
     }
 
@@ -100,22 +94,22 @@ contract Test {
     //     }
     // }
 
-    function isMarriedGood(Taxpayer t1) internal view returns (bool ret) {
-        Taxpayer spouse = t1.get_spouse();
-        if (address(spouse) == address(0)) {
-            return true;
-        }
-        ret = address(spouse.get_spouse()) == address(t1);
-    }
-
-    function invariant_are_both_married() public view returns (bool) {
-        for (uint256 index = 0; index < taxpayer.length; index++) {
-            if (!isMarriedGood(taxpayer[index])) {
-                return false;
-            }
-        }
-        return true;
-    }
+    // function isMarriedGood(Taxpayer t1) internal view returns (bool ret) {
+    //     Taxpayer spouse = t1.get_spouse();
+    //     if (address(spouse) == address(0)) {
+    //         return true;
+    //     }
+    //     ret = address(spouse.get_spouse()) == address(t1);
+    // }
+    //
+    // function invariant_are_both_married() public view returns (bool) {
+    //     for (uint256 index = 0; index < taxpayer.length; index++) {
+    //         if (!isMarriedGood(taxpayer[index])) {
+    //             return false;
+    //         }
+    //     }
+    //     return true;
+    // }
 
     // function invariant_no_pedo() public view returns (bool) {}
 }

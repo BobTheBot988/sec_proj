@@ -3,47 +3,17 @@ pragma solidity ^0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import "./Lottery.sol";
-import "./ERC165.sol";
+import "./State.sol";
 
-interface ITaxpayer is ERC165 {
-    // this function was added and is different than the original code since it lacked getters
-    function get_spouse() external view returns (Taxpayer);
-    function wonLottery() external;
-    //We require new_spouse != address(0);
-    function marry(address new_spouse) external;
-
-    function divorce() external;
-    /* Transfer part of tax allowance to own spouse */
-    function transferAllowance(uint256 change) external;
-
-    function raiseOwnAllowance() external;
-
-    function setTaxAllowance(uint256 ta) external;
-    function get_counter() external view returns (bool);
-    function getPoolAllowance() external view returns (uint256);
-    function setPoolAllowance() external;
-    function getTaxAllowance() external view returns (uint256);
-
-    // function getAge() external view returns (uint256);
-    // function isContract() external view returns (bool);
-    //
-    function joinLottery(address lot, uint256 r) external;
-    function marry_me(Taxpayer _spouse) external;
-    function revealLottery(address lot, uint256 r) external;
-    function getYearsSinceBirth() external view returns (uint256);
-
-    function getLotteryWins() external view returns (uint256);
-}
-
-contract Taxpayer is ITaxpayer, ERC165Query {
+contract Taxpayer {
     event AssertionFailed(string reason);
     int256 immutable secondsFromUnix;
-    uint256 constant oldAge = 1;
+    uint256 constant oldAge = 65;
     bool isMarried;
 
     bool iscontract;
-
-    mapping(address => Lottery) lottery;
+    address immutable state;
+    address lottery = address(0);
     /* Reference to spouse if person is married, address(0) otherwise */
     address spouse;
 
@@ -90,6 +60,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     //Parents are taxpayers
     constructor(address p1, address p2, int256 _secondsFromUnix) {
+        state = msg.sender;
         // age = 0;
         secondsFromUnix = _secondsFromUnix;
         // isMarried = false;
@@ -102,13 +73,10 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         // Useless if we implement the ERC165 iscontract = true;
     }
 
-    function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
-        return interfaceID == type(ERC165).interfaceId || interfaceID == type(ITaxpayer).interfaceId;
-    }
-
     // this function was added and is different than the original code since it lacked getters
     function get_spouse() public view returns (Taxpayer) {
         // require(this.doesContractImplementInterface(spouse, type(ITaxpayer).interfaceId));
+        require(spouse != address(0));
         return Taxpayer(spouse);
     }
 
@@ -121,7 +89,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         require(spouse == address(0));
         require(msg.sender == address(_spouse));
         require(address(_spouse) != address(this));
-        require(doesContractImplementInterface(address(_spouse), type(ITaxpayer).interfaceId));
+        require(State(state).isTaxpayerValid(address(_spouse)));
 
         // if (
         //     (spouse != address(0)) || (msg.sender != _spouse)
@@ -135,7 +103,7 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
     //We require new_spouse != address(0);
     function marry(address new_spouse) public nonReentrant {
-        require(doesContractImplementInterface(new_spouse, type(ITaxpayer).interfaceId));
+        require(State(state).isTaxpayerValid(address(new_spouse)));
         require(spouse == address(0));
         require(new_spouse != address(0));
         require(address(new_spouse) != address(this));
@@ -229,11 +197,13 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     }
 
     function wonLottery() public {
-        require(address(lottery[msg.sender]) != address(0));
+        require(lottery != address(0));
+        require(lottery == msg.sender);
 
         lottery_wins += 1;
         tax_allowance += 2000;
         pool_tax_allowance += 2000;
+        lottery = address(0);
         if (spouse != address(0)) {
             Taxpayer(spouse).setPoolAllowance();
             if (Taxpayer(spouse).getPoolAllowance() != pool_tax_allowance) {
@@ -252,7 +222,9 @@ contract Taxpayer is ITaxpayer, ERC165Query {
 
         if (spouse != address(0)) {
             Taxpayer(spouse).setPoolAllowance();
-            assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
+            if (Taxpayer(spouse).getPoolAllowance() != pool_tax_allowance) {
+                emit AssertionFailed("The poll allowances do not match");
+            }
         }
         // else {
         //     pool_tax_allowance = pool_tax_allowance % (tax_allowance + 1);
@@ -264,13 +236,9 @@ contract Taxpayer is ITaxpayer, ERC165Query {
     // }
 
     function setTaxAllowance(uint256 ta) public {
-        require(doesContractImplementInterface(msg.sender, type(ITaxpayer).interfaceId));
+        require(State(state).isTaxpayerValid(msg.sender));
         require(spouse != address(0));
         require(msg.sender == spouse);
-
-        // This assures me that my spouse actually called the function
-        // We should think about the lottery require(Taxpayer(msg.sender).isContract() || Lottery(msg.sender).isContract());
-        //
 
         tax_allowance = ta;
         if (Taxpayer(spouse).getTaxAllowance() + ta != (pool_tax_allowance)) {
@@ -282,17 +250,16 @@ contract Taxpayer is ITaxpayer, ERC165Query {
         return tax_allowance;
     }
 
-    function joinLottery(address lot, uint256 r) public {
-        Lottery l = Lottery(lot);
-        rev = r;
-        l.commit(keccak256(abi.encode(r)));
-        // the attribute is unsecure since it can be read from everyone
-        // the owner can exploit this feature to win himself every single time
+    function joinLottery() public {
+        Lottery Lot = State(state).getLottery();
+        lottery = address(Lot);
+
+        // emit AssertionFailed("joined");
+        Lottery(Lot).commit();
+        // emit AssertionFailed("joined");
     }
 
-    function revealLottery(address lot, uint256 r) public {
-        Lottery l = Lottery(lot);
-        rev = 0;
-        l.reveal(r);
-    }
+    // function revealLottery() public {
+    //     Lottery(lottery).reveal();
+    // }
 }

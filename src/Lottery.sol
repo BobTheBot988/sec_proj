@@ -1,49 +1,32 @@
-pragma solidity ^0.8.22;
 // SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.22;
 import "./Taxpayer.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import "./State.sol";
 
-import "./ERC165.sol";
+import "./Time.sol";
 
-interface ILottery is ERC165 {
-    //If the lottery has not started, anyone can invoke a lottery.
-    function startLottery() external;
-
-    //A taxpayer send his own commitment.
-    function commit(bytes32 y) external;
-
-    //A valid taxpayer who sent his own commitment, sends the revealing value.
-    function reveal(uint256 rev) external;
-
-    //Ends the lottery and compute the winner.
-    function endLottery() external;
-}
-
-contract Lottery is ILottery, ERC165Query {
+contract Lottery {
+    event AssertionFailed(string reason);
     modifier onlyBy(address _account) {
         require(msg.sender == _account);
         _;
     }
 
+    TimeTest immutable t = new TimeTest();
     address owner;
-    mapping(address => bytes32) commits;
+    mapping(address => bool) commits;
     // mapping(address => uint256) reveals;
-    address[] revealed;
-
-    uint256 total_revealed;
+    address[] taxpayer;
+    bool seedSet = false;
+    bytes32 sealedSeed;
+    uint256 storedBlockNumber;
     uint256 startTime;
-    uint256 revealTime;
     uint256 endTime;
     uint256 period;
 
-    // bool iscontract;
-    function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
-        return interfaceID == type(ERC165).interfaceId
-            || interfaceID == type(ITaxpayer).interfaceId ^ type(ILottery).interfaceId;
-    }
-
     modifier onlyAfter(uint256 _time) {
         require(block.timestamp >= _time);
-
         _;
     }
 
@@ -67,63 +50,81 @@ contract Lottery is ILottery, ERC165Query {
     //If the lottery has not started, anyone can invoke a lottery.
     function startLottery() public onlyBy(owner) {
         require(startTime == 0);
+        // commits = {};
         //startTime current time. Users send their committed value
         startTime = block.timestamp;
         //revealTime  time for revealing. User reveal their value
-        revealTime = startTime + period;
         //endTime a winner can be computed
-        endTime = revealTime + period;
+        endTime = startTime + period;
     }
 
     //A taxpayer send his own commitment.
-    function commit(bytes32 y) public {
+    function commit() public {
+        // emit AssertionFailed("Commita");
         require(block.timestamp >= startTime);
-        require(block.timestamp < revealTime);
         require(block.timestamp < endTime);
-        commits[msg.sender] = y;
+        require(State(owner).isTaxpayerValid(msg.sender));
+        require(Taxpayer(msg.sender).getYearsSinceBirth() < 65);
+        commits[msg.sender] = true;
+        taxpayer.push(msg.sender);
     }
 
+    // Randomness provided by this is predicatable. Use with care!
+    function get_random_number_stupid_pattern() internal returns (uint256) {
+        t.test_vesting(2 weeks);
+        return uint256(blockhash(block.number - 1));
+    }
+
+    function setSealedSeed(bytes32 _sealedSeed) public onlyBy(owner) {
+        require(!seedSet);
+        sealedSeed = _sealedSeed;
+        storedBlockNumber = block.number + 1;
+        seedSet = true;
+    }
+
+    function get_random_number_safe_pattern(bytes32 _seed) internal view returns (uint256) {
+        require(seedSet);
+        require(taxpayer.length > 0);
+        // emit AssertionFailed(string.concat(
+        //         "hash: ",
+        //         Strings.toString(uint256(keccak256(abi.encodePacked(owner, _seed)))),
+        //         " sealed_seed: ",
+        //         Strings.toString(uint256(sealedSeed))
+        //     ));
+        require(storedBlockNumber < block.number);
+
+        require(keccak256(abi.encodePacked(owner, _seed)) == sealedSeed);
+        // Insert logic for usage of random number here;
+        // betsClosed = false;
+        return uint256(keccak256(abi.encodePacked(_seed, blockhash(storedBlockNumber))));
+    }
     //A valid taxpayer who sent his own commitment, sends the revealing value.
-    function reveal(uint256 rev) public {
-        require(block.timestamp >= revealTime);
-        require(block.timestamp < endTime);
-        require(doesContractImplementInterface(msg.sender, type(ITaxpayer).interfaceId));
-        require(commits[msg.sender] != 0);
-        require(keccak256(abi.encode(rev)) == commits[msg.sender]);
-        revealed.push(msg.sender);
-
-        unchecked {
-            total_revealed += rev;
-        }
-
-        // reveals[msg.sender] = uint256(rev);
-    }
 
     //Ends the lottery and compute the winner.
     // The owner could never end the lottery
 
-    function endLottery() public onlyBy(owner) {
+    function endLottery(bytes32 _seed) public onlyBy(owner) {
         // Block time stamp is not safe since the verifier could lie
+
         require(block.timestamp >= endTime);
 
-        uint256 total = 0;
-        uint256 winnerIndex = total_revealed % revealed.length;
-        address winnerAddress = revealed[winnerIndex];
+        uint256 winnerIndex = get_random_number_safe_pattern(_seed) % taxpayer.length;
+        address winnerAddress = taxpayer[winnerIndex];
 
         // for (uint256 i = 0; i < revealed_len; i++) {
         //     total += reveals[revealed[i]];
         // }
 
-        // Taxpayer(revealed[total % revealed.length]).setTaxAllowance();
-        // Taxpayer(revealed[total % revealed.length]).setTaxAllowance();
+        Taxpayer(winnerAddress).wonLottery();
 
-        ITaxpayer(winnerAddress).wonLottery();
+        seedSet = false;
         startTime = 0;
-        revealTime = 0;
-        endTime = 0;
-    }
 
-    // function isContract() public view returns (bool) {
-    //     return iscontract;
-    // }
+        endTime = 0;
+        // The state pays
+        for (uint256 index = 0; index < taxpayer.length; index++) {
+            commits[taxpayer[index]] = false;
+            taxpayer[index] = address(0);
+        }
+    }
 }

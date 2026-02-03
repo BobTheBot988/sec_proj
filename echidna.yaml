@@ -1,3 +1,4 @@
-allContracts: true
-# allContracts: false
-prefix: "invariant_"
+# allContracts: true
+allContracts: false
+# prefix: "invariant_"
+allTimeDelay: 604700 # Allows up to 1 week to pass between calls
