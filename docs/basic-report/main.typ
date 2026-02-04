@@ -100,10 +100,12 @@ For this project we chose to do something simpler, the Taxpayer himself is respo
 
 - *Check-Effects-Interactions (CEI)*:
   We identified that the original code did not strictly follow the CEI pattern. To prevent potential re-entrancy attacks during external calls (e.g., transfers), we refactored the functions to update state variables *before* interacting with external addresses.
+
 This can be seen in the marriage function, transfer  allowance, and many others, in many of these:
 1. Some checks were missing
 2. Some effects were not happening before the interactions
 3. And some interactions were missing.
+
 For example if I marry, my spouse should immediately marry me as well, so the solution is to make another function, "marry_me()" that will be called after I set them as my spouse.
 This and some checks inside of the marry_me functions ensure us atomicity.
 - *Access Restriction*:
@@ -111,25 +113,75 @@ This and some checks inside of the marry_me functions ensure us atomicity.
 This problem can also be found in the Taxpayer contract since when we want to marry or when we want to divorce anyone could call this functions, this is solved in the same manner.
 - *Method Verification*: Problem, How do we assure that when we marry the address of the spouse  we provide actually points to a Legitimate Taxpayer contract?
 The first thing that comes to mind is the #link("https://eips.ethereum.org/EIPS/eip-165")[ERC165] by implementing this we could ask the address which methods it implements, but this is unreliable since we could marry a FAKE Taxpayer contract which is very dangerous.
+
 We found that the more reliable thing to do would be that of actually hashing the code of the contract and comparing the spouse before actually marring.
 However since the Taxpayer contract in our implementation actually has immutable values this is the wrong approach.
-So the solution is to create a Taxpayer Factory which creates keeps a mapping of each and every taxpayer it has created, so that all the
-Taxpayer needs to do is to check if the spouse's  address is in the mapping.
+So the solution is to create a Taxpayer Factory which keeps a mapping of each and every taxpayer it has created, so that all the
+Taxpayer needs to do is to check if the spouse's address is in the mapping.
+This can be useful for the lottery as well.
+For simplicity's sake and for the fact that the requirements did not actually tell us if the user could participate in multiple lotteries, we chose to limit the number of simultaneous lotteries shall be one.
+This can be easily done by creating a State contract which is the factory for the taxpayers and the single lottery, this lottery will be reusable, and we write pre-conditions such that it cannot be called and we also follow the C.E.I. so that we prevent any possible re-entrant attack.
 
 = Code
-
-
-== Lottery
-#figure(caption: "Access Restriction modifier")[
-  ```solidity
-  modifier onlyBy(address _account) {
-          require(msg.sender == _account);
-          _;
-  }
-  ```
-]<onlyBy>
+#figure()[ ```solidity require(startTime == 0);``` ]
 
 == test lottery
+#figure()[
+  ```solidity
+  function proxy_player_commit(uint256 playerIndex) internal {
+        uint256 idx = playerIndex % NUM_PLAYERS;
+        players[idx].joinLottery();
+    }
+
+    function player_round(uint256 idx) internal {
+        proxy_player_commit(idx);
+    }
+
+    function lottery_rounds() internal {
+        for (uint256 x = 0; x < N_OF_ROUNDS; x++) {
+            s.proxy_startlottery();
+
+            for (uint256 index = 0; index < NUM_PLAYERS; index++) {
+                player_round(index);
+            }
+
+            t.test_vesting(1 days); // NOTE: This makes time pass by one day
+            s.proxy_endlottery();
+
+            t.test_blocks_forward(2); //NOTE: Makes the blocks go forward by one
+        }
+    }
+
+    function safe_exp_value(uint256 player_idx) internal {
+        Taxpayer p = players[player_idx];
+        int256 exp_val = int256((N_OF_ROUNDS + 1) * (10 ^ 18 / NUM_PLAYERS));
+        int256 approx_exp_val = int256(p.getLotteryWins() * 10 ^ 18);
+        int256 delta = exp_val - approx_exp_val;
+
+        if (delta < 0) {
+            delta = -delta;
+        }
+
+        if (delta > 5 * 10 ^ 18) {
+            emit AssertionFailed(string.concat(
+                    "The lottery is unfair, Expected val:",
+                    Strings.toStringSigned(delta),
+                    " Approx:",
+                    Strings.toStringSigned(approx_exp_val),
+                    " Delta:",
+                    Strings.toStringSigned(delta)
+                ));
+        }
+    }
+
+    function invariant_test_fairness() public {
+        lottery_rounds();
+
+        for (uint256 index = 0; index < NUM_PLAYERS; index++) {
+            safe_exp_value(index);
+        }
+    }```
+]<test_fairness>
 
 == test taxpayer
 #figure(caption: "Access Restriction modifier")[
@@ -140,9 +192,9 @@ Taxpayer needs to do is to check if the spouse's  address is in the mapping.
           }
   }
   ```
-]
+]<forEach>
 
-```solidity
+#figure()[ ```solidity
  function checkMarried(Taxpayer t1) internal {
         Taxpayer spouse = t1.get_spouse();
         if (address(spouse) == address(0)) return;
@@ -155,8 +207,9 @@ Taxpayer needs to do is to check if the spouse's  address is in the mapping.
     function echidna_are_both_married() public {
         forEach(checkMarried);
     }
-```
-```solidity
+``` ]<two_ways_marriage>
+
+#figure()[ ```solidity
     function checkAllowance(Taxpayer t1) internal {
         if (t1.getTaxAllowance() > t1.getPoolAllowance()) {
             emit AssertionFailed("Too much money saved in taxes");
@@ -176,8 +229,9 @@ Taxpayer needs to do is to check if the spouse's  address is in the mapping.
     function echidna_is_tax_allowance_good() public {
         forEach(checkAllowance);
     }
-```
-```solidity
+``` ]<check_allowance>
+
+#figure()[ ```solidity
 function checkAgeAllowance(Taxpayer t1) internal {
         uint256 my_mod = 0;
         uint256 my_num = 5000;
@@ -187,7 +241,6 @@ function checkAgeAllowance(Taxpayer t1) internal {
         my_mod += (t1.getLotteryWins() * 2000);
         Taxpayer sp = t1.get_spouse();
         if (address(sp) != address(0)) {
-            // emit AssertionFailed("Married");
             my_num = my_num * 2;
             if (sp.getYearsSinceBirth() >= oldAge && sp.get_counter()) {
                 my_mod += 2000;
@@ -203,6 +256,7 @@ function checkAgeAllowance(Taxpayer t1) internal {
     function echidna_is_aged_tax_allowance_good() public {
         forEach(checkAgeAllowance);
     }
-```
+``` ]<age_allowance>
+
 == Conclusions
 Using Echidna, we successfully verified the core invariants of the `Taxpayer` system. The initial fuzzing campaign revealed violations in the marriage logic (one-way marriage bugs) and tax pooling calculations, which were resolved by enforcing the bidirectional constraints described in Section 2.

@@ -115,8 +115,6 @@ contract Lottery {
         //     total += reveals[revealed[i]];
         // }
 
-        Taxpayer(winnerAddress).wonLottery();
-
         seedSet = false;
         startTime = 0;
 
@@ -126,5 +124,6 @@ contract Lottery {
             commits[taxpayer[index]] = false;
             taxpayer[index] = address(0);
         }
+        Taxpayer(winnerAddress).wonLottery();
     }
 }
