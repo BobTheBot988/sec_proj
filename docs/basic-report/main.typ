@@ -244,7 +244,7 @@ This can be easily done by creating a State contract which is the factory for th
     }
 ``` ]<check_allowance>
 
-#figure()[ ```solidity
+#figure(caption: "This checks the allowance counting the age and the lottery wins.")[ ```solidity
 function checkAgeAllowance(Taxpayer t1) internal {
         uint256 my_mod = 0;
         uint256 my_num = 5000;
