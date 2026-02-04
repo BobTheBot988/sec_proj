@@ -32,10 +32,19 @@ It works by fuzzing input to the specified contract this will test the invariant
 this means that testing all possible inputs with all possible combinations is actually quite complex(It's not terminable).
 The main problem with this tool is that echidna itself is not formally verified therefore even if the tests pass it does not guarantee that the contract is actually sound.
 So should we trust in echidna and echidna alone, No we should see that the code follows safe patterns, and that the invariants we wrote are actually correct.
-```bash
+#figure(caption: "Echidna cmd example for testing the taxpayer invariants")[ ```bash
 echidna --test-mode assertion test/testtaxpayer.sol --corpus-dir corpus_dir
-```
+``` ]
+#figure(
+  caption: "Example of echidna showing an AssertionFailed event  being triggered for the testing the lottery",
+)[ #image(
+  "assets/Screenshot_2026-02-04_14-56-36.png",
+) ]
 
+#figure(caption: "Example of echidna passing for every test in testtaxpayer")[
+  #image(
+    "assets/Screenshot_20260204_152149.png",
+  ) ]
 
 
 
@@ -184,7 +193,7 @@ This can be easily done by creating a State contract which is the factory for th
 ]<test_fairness>
 
 == test taxpayer
-#figure(caption: "Access Restriction modifier")[
+#figure(caption: $forall$ + " utility.")[
   ```solidity
   function forEach(function(Taxpayer) internal constraint) internal {
           for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
@@ -194,7 +203,11 @@ This can be easily done by creating a State contract which is the factory for th
   ```
 ]<forEach>
 
-#figure()[ ```solidity
+#figure(
+  caption: "Check Married Invariant this checks the "
+    + $"me_married_with_spouse" <==> "spouse_married_with_me"$
+    + " constraint.",
+)[ ```solidity
  function checkMarried(Taxpayer t1) internal {
         Taxpayer spouse = t1.get_spouse();
         if (address(spouse) == address(0)) return;
@@ -204,12 +217,12 @@ This can be easily done by creating a State contract which is the factory for th
         }
     }
 
-    function echidna_are_both_married() public {
+    function invariant_are_both_married() public {
         forEach(checkMarried);
     }
 ``` ]<two_ways_marriage>
 
-#figure()[ ```solidity
+#figure(caption: "")[ ```solidity
     function checkAllowance(Taxpayer t1) internal {
         if (t1.getTaxAllowance() > t1.getPoolAllowance()) {
             emit AssertionFailed("Too much money saved in taxes");
@@ -226,7 +239,7 @@ This can be easily done by creating a State contract which is the factory for th
         }
     }
 
-    function echidna_is_tax_allowance_good() public {
+    function invariant_is_tax_allowance_good() public {
         forEach(checkAllowance);
     }
 ``` ]<check_allowance>
@@ -253,10 +266,11 @@ function checkAgeAllowance(Taxpayer t1) internal {
         }
     }
 
-    function echidna_is_aged_tax_allowance_good() public {
+    function invariant_is_aged_tax_allowance_good() public {
         forEach(checkAgeAllowance);
     }
 ``` ]<age_allowance>
 
 == Conclusions
 Using Echidna, we successfully verified the core invariants of the `Taxpayer` system. The initial fuzzing campaign revealed violations in the marriage logic (one-way marriage bugs) and tax pooling calculations, which were resolved by enforcing the bidirectional constraints described in Section 2.
+While for the lottery we managed to re-write the code base making it impossible to instantiate the lottery more than once and making a person only win once and not more times at the same time.
