@@ -41,12 +41,31 @@ echidna --test-mode assertion test/testtaxpayer.sol --corpus-dir corpus_dir
   "assets/Screenshot_2026-02-04_14-56-36.png",
 ) ]
 
-#figure(caption: "Example of echidna passing for every test in testtaxpayer")[
+#figure(caption: "Example of echidna passing for every test in testTaxpayer")[
   #image(
-    "assets/Screenshot_20260204_152149.png",
+    "assets/goodTaxpayer.jpg",
+  ) ]
+#figure(caption: "Example of echidna passing for every test in testLottery")[
+  #image(
+    "assets/goodLottery.jpg",
   ) ]
 
-
+#figure(caption: "Example of echidna not passing for the marry test")[
+  #image(
+    "assets/badMarry.jpg",
+  ) ]
+#figure(caption: "Example of echidna not passing because of the age fraud")[
+  #image(
+    "assets/badAge.jpg",
+  ) ]
+#figure(caption: "Example of echidna not passing because of the taxallowance fraud")[
+  #image(
+    "assets/badTaxAllowance.jpg",
+  ) ]
+#figure(caption: "Example of echidna not passing because of the bad lottery winner Distribution")[
+  #image(
+    "assets/badLottery.jpg",
+  ) ]
 
 == The Tax-Payer problem
 The first requirement we need to check is if the smart contract written inside of Taxpayer.sol actually enforces sane Taxpayer constraints. We define the correct state using the following invariants:
@@ -132,7 +151,7 @@ For simplicity's sake and for the fact that the requirements did not actually te
 This can be easily done by creating a State contract which is the factory for the taxpayers and the single lottery, this lottery will be reusable, and we write pre-conditions such that it cannot be called and we also follow the C.E.I. so that we prevent any possible re-entrant attack.
 
 = Code
-#figure()[ ```solidity require(startTime == 0);``` ]
+
 
 == test lottery
 #figure()[
@@ -146,32 +165,34 @@ This can be easily done by creating a State contract which is the factory for th
         proxy_player_commit(idx);
     }
 
-    function lottery_rounds() internal {
-        for (uint256 x = 0; x < N_OF_ROUNDS; x++) {
+    function lottery_rounds(uint256 _seed) public {
+            N_OF_ROUNDS+=1;
             s.proxy_startlottery();
 
-            for (uint256 index = 0; index < NUM_PLAYERS; index++) {
+            for (uint256 index = 0; index < players.length; index++) {
                 player_round(index);
             }
 
             t.test_vesting(1 days); // NOTE: This makes time pass by one day
-            s.proxy_endlottery();
+            s.proxy_endlottery(_seed);
 
             t.test_blocks_forward(2); //NOTE: Makes the blocks go forward by one
-        }
     }
 
     function safe_exp_value(uint256 player_idx) internal {
         Taxpayer p = players[player_idx];
-        int256 exp_val = int256((N_OF_ROUNDS + 1) * (10 ^ 18 / NUM_PLAYERS));
-        int256 approx_exp_val = int256(p.getLotteryWins() * 10 ^ 18);
+        if (p.getYearsSinceBirth() >=65) {
+          return;
+        }
+        int256 exp_val = int256((N_OF_ROUNDS) * (( 10 ** 18 ) / get_len()));
+        int256 approx_exp_val = int256(p.getLotteryWins() * ( 10 ** 18 ));
         int256 delta = exp_val - approx_exp_val;
 
         if (delta < 0) {
             delta = -delta;
         }
 
-        if (delta > 5 * 10 ^ 18) {
+        if (delta > 10 * ( 10 ** 18 )) {
             emit AssertionFailed(string.concat(
                     "The lottery is unfair, Expected val:",
                     Strings.toStringSigned(delta),
@@ -184,21 +205,30 @@ This can be easily done by creating a State contract which is the factory for th
     }
 
     function invariant_test_fairness() public {
-        lottery_rounds();
-
-        for (uint256 index = 0; index < NUM_PLAYERS; index++) {
+        for (uint256 index = 0; index < players.length; index++) {
             safe_exp_value(index);
         }
-    }```
-]<test_fairness>
+    }
+  ```]<test_fairness>
+#figure()[```solidity
+function invariant_test_age() public {
+ for (uint256 index = 0; index < players.length; index++) {
+
+     bool i = lot.getTaxPayer(address( players[index] ));
+
+      if(i && ( players[index].getYearsSinceBirth()>= 65 )){
+         emit AssertionFailed("Old man in lottery");
+      }
+    }
+}```]<test_test_age>
 
 == test taxpayer
 #figure(caption: $forall$ + " utility.")[
   ```solidity
   function forEach(function(Taxpayer) internal constraint) internal {
-          for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
-              constraint(taxpayer[index]);
-          }
+        for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
+            constraint(taxpayer[index]);
+        }
   }
   ```
 ]<forEach>
@@ -273,4 +303,4 @@ function checkAgeAllowance(Taxpayer t1) internal {
 
 == Conclusions
 Using Echidna, we successfully verified the core invariants of the `Taxpayer` system. The initial fuzzing campaign revealed violations in the marriage logic (one-way marriage bugs) and tax pooling calculations, which were resolved by enforcing the bidirectional constraints described in Section 2.
-While for the lottery we managed to re-write the code base making it impossible to instantiate the lottery more than once and making a person only win once and not more times at the same time.
+While for the lottery we managed to re-write the code base making it impossible to instantiate the lottery more than once and making a person only win once and not more times at the same time, while having good enough player winning distribution.
