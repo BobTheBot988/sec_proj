@@ -35,12 +35,11 @@ contract State {
         return lottery;
     }
 
-    function proxy_startlottery() external {
-        // emit AssertionFailed("Suca");
+    function proxy_startlottery() external onlyOwner {
         Lottery(lottery).startLottery();
     }
 
-    function proxy_endlottery(uint256 _seed ) external {
+    function proxy_endlottery(uint256 _seed ) external onlyOwner {
         bytes32 _sealedSeed = keccak256(abi.encodePacked(address(this), _seed));
 
         Lottery(lottery).setSealedSeed(_sealedSeed);

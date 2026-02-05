@@ -21,13 +21,14 @@ contract TestLottery {
     constructor() {
         // Create valid contract players
         s = new State();
-        for (uint256 i = 0; i < NUM_PLAYERS; i++) {
             players.push(State(s).addTaxpayer(address(0), address(0), 0));
-        }
+            players.push(State(s).addTaxpayer(address(0), address(0), 0));
+            players.push(State(s).addTaxpayer(address(0), address(0), -1265385612));
     }
 
     function proxy_player_commit(uint256 playerIndex) internal {
-        uint256 idx = playerIndex % NUM_PLAYERS;
+        uint256 idx = playerIndex ;
+
         players[idx].joinLottery();
     }
 
@@ -39,7 +40,7 @@ contract TestLottery {
             N_OF_ROUNDS+=1;
             s.proxy_startlottery();
 
-            for (uint256 index = 0; index < NUM_PLAYERS; index++) {
+            for (uint256 index = 0; index < players.length; index++) {
                 player_round(index);
             }
 
@@ -48,10 +49,20 @@ contract TestLottery {
 
             t.test_blocks_forward(2); //NOTE: Makes the blocks go forward by one
     }
-
+    function get_len() internal returns (uint256 l){
+      l = players.length;
+      for (uint256 index = 0; index < players.length; index++) {
+        if (players[index].getYearsSinceBirth()>=65){
+          l-=1;
+        }
+      }
+    }
     function safe_exp_value(uint256 player_idx) internal {
         Taxpayer p = players[player_idx];
-        int256 exp_val = int256((N_OF_ROUNDS) * (( 10 ** 18 ) / NUM_PLAYERS));
+        if (p.getYearsSinceBirth() >=65) {
+          return;
+        }
+        int256 exp_val = int256((N_OF_ROUNDS) * (( 10 ** 18 ) / get_len()));
         int256 approx_exp_val = int256(p.getLotteryWins() * ( 10 ** 18 ));
         int256 delta = exp_val - approx_exp_val;
 
@@ -74,8 +85,19 @@ contract TestLottery {
     }
 
     function invariant_test_fairness() public {
-        for (uint256 index = 0; index < NUM_PLAYERS; index++) {
+        for (uint256 index = 0; index < players.length; index++) {
             safe_exp_value(index);
+        }
+    }
+
+    function invariant_test_age() public {
+     for (uint256 index = 0; index < players.length; index++) {
+       
+         // bool i = lot.getTaxPayer(address( players[index] ));
+
+          if( ( players[index].getYearsSinceBirth()>= 65 )){
+             emit AssertionFailed("Old man in lottery");
+          }      
         }
     }
 

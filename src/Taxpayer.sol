@@ -51,6 +51,10 @@ contract Taxpayer {
     function getLotteryWins() public view returns (uint256) {
         return lottery_wins;
     }
+    function getLottery() public view returns (Lottery){
+      require(lottery != address(0));
+      return Lottery(lottery);
+    }
     modifier nonReentrant() {
         require(!lock);
         lock = true;
@@ -239,8 +243,8 @@ contract Taxpayer {
         require(State(state).isTaxpayerValid(msg.sender));
         require(spouse != address(0));
         require(msg.sender == spouse);
-
         tax_allowance = ta;
+        
         if (Taxpayer(spouse).getTaxAllowance() + ta != (pool_tax_allowance)) {
             emit AssertionFailed("You and your wife tried to cheat");
         }
@@ -253,6 +257,8 @@ contract Taxpayer {
     function joinLottery() public {
         Lottery Lot = State(state).getLottery();
         lottery = address(Lot);
+
+
 
         // emit AssertionFailed("joined");
         Lottery(Lot).commit();

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 import "../src/Taxpayer.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import "../src/State.sol";
 
 contract Test {
     event AssertionFailed(string reason);
@@ -11,12 +12,12 @@ contract Test {
 
     Taxpayer[] taxpayer;
     uint256 internal constant N_OF_TAXPAYER = 10;
-
+    State immutable s;
     constructor() {
-        for (uint256 index = 0; index < N_OF_TAXPAYER; index++) {
-            taxpayer.push(new Taxpayer(address(0), address(0), 0));
-        }
-        // taxpayer[0].marry(address(taxpayer[1]));
+            s = new State();
+            taxpayer.push(State(s).addTaxpayer(address(0), address(0), 0));
+            taxpayer.push(State(s).addTaxpayer(address(0), address(0), 0));
+            taxpayer.push(State(s).addTaxpayer(address(0), address(0), -1265385612));
         // taxpayer[0].setTaxAllowance(1000000);
     }
 

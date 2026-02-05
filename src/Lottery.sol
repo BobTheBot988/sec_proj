@@ -64,7 +64,8 @@ contract Lottery {
         require(block.timestamp >= startTime);
         require(block.timestamp < endTime);
         require(State(owner).isTaxpayerValid(msg.sender));
-        require(Taxpayer(msg.sender).getYearsSinceBirth() < 65);
+        // require(Taxpayer(msg.sender).getYearsSinceBirth() < 65);
+        
         commits[msg.sender] = true;
         taxpayer.push(msg.sender);
     }
@@ -101,8 +102,11 @@ contract Lottery {
     //A valid taxpayer who sent his own commitment, sends the revealing value.
 
     //Ends the lottery and compute the winner.
-    // The owner could never end the lottery
-
+   // The owner could never end the lottery
+    function getTaxPayer(address t) public view returns (bool){
+       
+      return commits[t] == true;
+    }
     function endLottery(uint256 _seed) public onlyBy(owner) {
         // Block time stamp is not safe since the verifier could lie
 
