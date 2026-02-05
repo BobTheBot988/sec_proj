@@ -40,15 +40,13 @@ contract State {
         Lottery(lottery).startLottery();
     }
 
-    function proxy_endlottery() external {
-        bytes32 n = keccak256(abi.encode(block.number));
-        bytes32 seed = keccak256(abi.encodePacked(address(this), n));
+    function proxy_endlottery(uint256 _seed ) external {
+        bytes32 _sealedSeed = keccak256(abi.encodePacked(address(this), _seed));
 
-        Lottery(lottery).setSealedSeed(seed);
+        Lottery(lottery).setSealedSeed(_sealedSeed);
 
         t.test_blocks_forward(2); // NOTE: make block.number go forward by 2
-        // t.test_vesting(2 days); // NOTE: make block.number go forward by 2
-        Lottery(lottery).endLottery(n);
+        Lottery(lottery).endLottery(_seed);
     }
 
     function addTaxpayer(address p1, address p2, int256 dob) public onlyOwner returns (Taxpayer) {

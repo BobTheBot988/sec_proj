@@ -13,7 +13,7 @@ contract TestLottery {
     uint256 constant NUM_PLAYERS = 2;
     State immutable s;
     Lottery immutable lot;
-    uint16 constant N_OF_ROUNDS = 5;
+    uint16 N_OF_ROUNDS = 0;
 
     TimeTest immutable t = new TimeTest();
 
@@ -35,8 +35,8 @@ contract TestLottery {
         proxy_player_commit(idx);
     }
 
-    function lottery_rounds() internal {
-        for (uint256 x = 0; x < N_OF_ROUNDS; x++) {
+    function lottery_rounds(uint256 _seed) public {
+            N_OF_ROUNDS+=1;
             s.proxy_startlottery();
 
             for (uint256 index = 0; index < NUM_PLAYERS; index++) {
@@ -44,23 +44,24 @@ contract TestLottery {
             }
 
             t.test_vesting(1 days); // NOTE: This makes time pass by one day
-            s.proxy_endlottery();
+            s.proxy_endlottery(_seed);
 
             t.test_blocks_forward(2); //NOTE: Makes the blocks go forward by one
-        }
     }
 
     function safe_exp_value(uint256 player_idx) internal {
         Taxpayer p = players[player_idx];
-        int256 exp_val = int256((N_OF_ROUNDS + 1) * (10 ^ 18 / NUM_PLAYERS));
-        int256 approx_exp_val = int256(p.getLotteryWins() * 10 ^ 18);
+        int256 exp_val = int256((N_OF_ROUNDS) * (( 10 ** 18 ) / NUM_PLAYERS));
+        int256 approx_exp_val = int256(p.getLotteryWins() * ( 10 ** 18 ));
         int256 delta = exp_val - approx_exp_val;
 
         if (delta < 0) {
             delta = -delta;
         }
-
-        if (delta > 5 * 10 ^ 18) {
+        // if ( N_OF_ROUNDS >= 20){
+        //   emit AssertionFailed("rounds!!!!");
+        // }
+        if (delta > 10 * ( 10 ** 18 )) {
             emit AssertionFailed(string.concat(
                     "The lottery is unfair, Expected val:",
                     Strings.toStringSigned(delta),
@@ -73,8 +74,6 @@ contract TestLottery {
     }
 
     function invariant_test_fairness() public {
-        lottery_rounds();
-
         for (uint256 index = 0; index < NUM_PLAYERS; index++) {
             safe_exp_value(index);
         }

@@ -71,7 +71,7 @@ contract Lottery {
 
     // Randomness provided by this is predicatable. Use with care!
     function get_random_number_stupid_pattern() internal returns (uint256) {
-        t.test_vesting(2 weeks);
+        // t.test_vesting(2 weeks);
         return uint256(blockhash(block.number - 1));
     }
 
@@ -82,7 +82,7 @@ contract Lottery {
         seedSet = true;
     }
 
-    function get_random_number_safe_pattern(bytes32 _seed) internal view returns (uint256) {
+    function get_random_number_safe_pattern(uint256 _seed) internal view returns (uint256) {
         require(seedSet);
         require(taxpayer.length > 0);
         // emit AssertionFailed(string.concat(
@@ -103,7 +103,7 @@ contract Lottery {
     //Ends the lottery and compute the winner.
     // The owner could never end the lottery
 
-    function endLottery(bytes32 _seed) public onlyBy(owner) {
+    function endLottery(uint256 _seed) public onlyBy(owner) {
         // Block time stamp is not safe since the verifier could lie
 
         require(block.timestamp >= endTime);
