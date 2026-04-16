@@ -6,6 +6,10 @@ import "./Time.sol";
 
 contract State {
     event AssertionFailed(string reason);
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
     mapping(address => bool) private taxpayer;
     Lottery private immutable lottery;
     address private immutable owner;
