@@ -17,11 +17,6 @@ contract State {
         lottery = l;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
     function isTaxpayerValid(address t) external view returns (bool) {
         return taxpayer[t];
     }
@@ -39,7 +34,7 @@ contract State {
         Lottery(lottery).startLottery();
     }
 
-    function proxy_endlottery(uint256 _seed ) external onlyOwner {
+    function proxy_endlottery(uint256 _seed) external onlyOwner {
         bytes32 _sealedSeed = keccak256(abi.encodePacked(address(this), _seed));
 
         Lottery(lottery).setSealedSeed(_sealedSeed);
