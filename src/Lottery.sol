@@ -7,7 +7,6 @@ import "./State.sol";
 import "./Time.sol";
 
 contract Lottery {
-    event AssertionFailed(string reason);
     modifier onlyBy(address _account) {
         require(msg.sender == _account);
         _;
@@ -28,6 +27,10 @@ contract Lottery {
     modifier onlyAfter(uint256 _time) {
         require(block.timestamp >= _time);
         _;
+    }
+
+    function getStartTime() external returns (uint256) {
+        return startTime;
     }
 
     function changeOwner(address _newOwner) public onlyBy(owner) {
@@ -60,18 +63,17 @@ contract Lottery {
 
     //A taxpayer send his own commitment.
     function commit() public {
-        // emit AssertionFailed("Commita");
         require(block.timestamp >= startTime);
         require(block.timestamp < endTime);
         require(State(owner).isTaxpayerValid(msg.sender));
         // require(Taxpayer(msg.sender).getYearsSinceBirth() < 65);
-        
+
         commits[msg.sender] = true;
         taxpayer.push(msg.sender);
     }
 
     // Randomness provided by this is predicatable. Use with care!
-    function get_random_number_stupid_pattern() internal returns (uint256) {
+    function get_random_number_stupid_pattern() internal view returns (uint256) {
         // t.test_vesting(2 weeks);
         return uint256(blockhash(block.number - 1));
     }
@@ -86,12 +88,6 @@ contract Lottery {
     function get_random_number_safe_pattern(uint256 _seed) internal view returns (uint256) {
         require(seedSet);
         require(taxpayer.length > 0);
-        // emit AssertionFailed(string.concat(
-        //         "hash: ",
-        //         Strings.toString(uint256(keccak256(abi.encodePacked(owner, _seed)))),
-        //         " sealed_seed: ",
-        //         Strings.toString(uint256(sealedSeed))
-        //     ));
         require(storedBlockNumber < block.number);
 
         require(keccak256(abi.encodePacked(owner, _seed)) == sealedSeed);
@@ -99,14 +95,15 @@ contract Lottery {
         // betsClosed = false;
         return uint256(keccak256(abi.encodePacked(_seed, blockhash(storedBlockNumber))));
     }
+
     //A valid taxpayer who sent his own commitment, sends the revealing value.
 
     //Ends the lottery and compute the winner.
-   // The owner could never end the lottery
-    function getTaxPayer(address t) public view returns (bool){
-       
-      return commits[t] == true;
+    // The owner could never end the lottery
+    function getTaxPayer(address t1) public view returns (bool) {
+        return commits[t1] == true;
     }
+
     function endLottery(uint256 _seed) public onlyBy(owner) {
         // Block time stamp is not safe since the verifier could lie
 
@@ -127,7 +124,7 @@ contract Lottery {
         // The state pays
         for (uint256 index = 0; index < taxpayer.length; index++) {
             commits[taxpayer[index]] = false;
-            taxpayer[index] = address(0);
         }
+        delete taxpayer;
     }
 }
