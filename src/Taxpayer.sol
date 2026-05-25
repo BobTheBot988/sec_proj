@@ -7,7 +7,7 @@ import "./State.sol";
 
 contract Taxpayer {
     int256 immutable secondsFromUnix;
-    uint256 constant oldAge = 65;
+    uint8 constant oldAge = 65;
     bool isMarried;
 
     bool iscontract;
@@ -65,17 +65,6 @@ contract Taxpayer {
 
     //Parents are taxpayers
     constructor(address p1, address p2, int256 _secondsFromUnix) {
-        state = msg.sender;
-        // age = 0;
-        secondsFromUnix = _secondsFromUnix;
-        // isMarried = false;
-        parent1 = p1;
-        parent2 = p2;
-        spouse = address(0);
-        income = 0;
-        tax_allowance = DEFAULT_ALLOWANCE;
-        pool_tax_allowance = DEFAULT_ALLOWANCE;
-        // Useless if we implement the ERC165 iscontract = true;
     }
 
     // this function was added and is different than the original code since it lacked getters
@@ -94,15 +83,6 @@ contract Taxpayer {
         require(msg.sender == address(_spouse));
         require(address(_spouse) != address(this));
         require(State(state).isTaxpayerValid(address(_spouse)));
-
-        // if (
-        //     (spouse != address(0)) || (msg.sender != _spouse)
-        //         || (!this.doesContractImplementInterface(_spouse, type(ITaxpayer).interfaceId))
-        // ) return;
-        //
-        spouse = address(_spouse);
-        // pool_tax_allowance = (pool_tax_allowance + Taxpayer(spouse).getTaxAllowance()) % 10001;
-        Taxpayer(spouse).setPoolAllowance();
     }
 
     //We require new_spouse != address(0);
@@ -112,12 +92,6 @@ contract Taxpayer {
         require(new_spouse != address(0));
         require(address(new_spouse) != address(this));
 
-        spouse = new_spouse;
-        // pool_tax_allowance = (pool_tax_allowance + Taxpayer(spouse).getTaxAllowance()) % 10001;
-        // isMarried = true;
-        Taxpayer(new_spouse).marry_me(this);
-        Taxpayer(spouse).setPoolAllowance();
-        // assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
         assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
 
         assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
@@ -127,35 +101,11 @@ contract Taxpayer {
         require(spouse != address(0));
         require(msg.sender == spouse);
         require(address(Taxpayer(spouse).get_spouse()) == address(0));
-        spouse = address(0);
-
-        if (getYearsSinceBirth() >= oldAge && counter) {
-            tax_allowance = ALLOWANCE_OAP;
-            pool_tax_allowance = ALLOWANCE_OAP;
-        } else {
-            tax_allowance = DEFAULT_ALLOWANCE;
-            pool_tax_allowance = DEFAULT_ALLOWANCE;
-        }
-        tax_allowance += (2000 * lottery_wins);
-        pool_tax_allowance += (2000 * lottery_wins);
+        
     }
 
     function divorce() public {
         require(spouse != address(0));
-        address tmp = spouse;
-        spouse = address(0);
-
-        if (getYearsSinceBirth() >= oldAge && counter) {
-            tax_allowance = ALLOWANCE_OAP;
-            pool_tax_allowance = ALLOWANCE_OAP;
-        } else {
-            tax_allowance = DEFAULT_ALLOWANCE;
-            pool_tax_allowance = DEFAULT_ALLOWANCE;
-        }
-
-        tax_allowance += (2000 * lottery_wins);
-        Taxpayer(tmp).divorce_me();
-        // isMarried = false;
     }
 
     /* Transfer part of tax allowance to own spouse */
@@ -166,10 +116,7 @@ contract Taxpayer {
 
         require(sp_tax_allowance + tax_allowance == (pool_tax_allowance));
 
-        tax_allowance = tax_allowance - change;
-        sp_tax_allowance = sp.getTaxAllowance();
-        sp.setTaxAllowance(sp_tax_allowance + change);
-        // we need to make the DEFAULT_ALLOWANCE dynamic
+        
         assert(sp.getTaxAllowance() + tax_allowance == (pool_tax_allowance));
     }
 
@@ -181,49 +128,19 @@ contract Taxpayer {
         require(spouse != address(0));
         require(msg.sender == spouse);
 
-        uint256 _pool_tax_allowance = 10000;
-
-        _pool_tax_allowance += (2000 * lottery_wins);
-        if (getYearsSinceBirth() >= oldAge && counter) {
-            _pool_tax_allowance += 2000;
-        }
-
-        _pool_tax_allowance += (2000 * Taxpayer(spouse).getLotteryWins());
-        if (Taxpayer(spouse).getYearsSinceBirth() >= oldAge && Taxpayer(spouse).get_counter()) {
-            _pool_tax_allowance += 2000;
-        }
-        pool_tax_allowance = (_pool_tax_allowance);
+        
     }
 
     function wonLottery() public {
         require(lottery != address(0));
         require(lottery == msg.sender);
-
-        lottery_wins += 1;
-        tax_allowance += 2000;
-        pool_tax_allowance += 2000;
-        lottery = address(0);
-        if (spouse != address(0)) {
-            Taxpayer(spouse).setPoolAllowance();
-            assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
-        }
+        
     }
 
     function raiseOwnAllowance() public {
         require(getYearsSinceBirth() >= oldAge);
         require(counter == false);
-        counter = true;
-
-        tax_allowance += 2000;
-        pool_tax_allowance = (pool_tax_allowance + 2000);
-
-        if (spouse != address(0)) {
-            Taxpayer(spouse).setPoolAllowance();
-            assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
-        }
-        // else {
-        //     pool_tax_allowance = pool_tax_allowance % (tax_allowance + 1);
-        // }
+       
     }
 
     // function getAge() public view returns (uint256) {
@@ -234,7 +151,6 @@ contract Taxpayer {
         require(State(state).isTaxpayerValid(msg.sender));
         require(spouse != address(0));
         require(msg.sender == spouse);
-        tax_allowance = ta;
 
         assert(Taxpayer(spouse).getTaxAllowance() + ta == (pool_tax_allowance));
     }
@@ -244,12 +160,6 @@ contract Taxpayer {
     }
 
     function joinLottery() public {
-        Lottery Lot = State(state).getLottery();
-        lottery = address(Lot);
-
-        // emit AssertionFailed("joined");
-        Lottery(Lot).commit();
-        // emit AssertionFailed("joined");
     }
 
     // function revealLottery() public {

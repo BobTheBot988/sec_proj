@@ -37,20 +37,11 @@ contract State {
     }
 
     function proxy_endlottery(uint256 _seed) external onlyOwner {
-        bytes32 _sealedSeed = keccak256(abi.encodePacked(address(this), _seed));
-
-        Lottery(lottery).setSealedSeed(_sealedSeed);
-
-        t.test_blocks_forward(2); // NOTE: make block.number go forward by 2
-        Lottery(lottery).endLottery(_seed);
+        
     }
 
     function addTaxpayer(address p1, address p2, int256 dob) public onlyOwner returns (Taxpayer) {
         require(taxpayer[p1] == true || p1 == address(0));
         require(taxpayer[p2] == true || p2 == address(0));
-
-        Taxpayer t1 = new Taxpayer(p1, p2, dob);
-        taxpayer[address(t1)] = true;
-        return t1;
     }
 }

@@ -36,29 +36,17 @@ contract Lottery {
     function changeOwner(address _newOwner) public onlyBy(owner) {
         require(block.timestamp < endTime);
         require(_newOwner != address(0));
-        owner = _newOwner;
     }
 
     // Initialize the registry with the lottery period.
     // The owner should be set
     constructor(uint256 p) {
         require(p > 0);
-        owner = msg.sender;
-        period = p;
-        startTime = 0;
-        endTime = 0;
-        // iscontract = true;
     }
 
     //If the lottery has not started, anyone can invoke a lottery.
     function startLottery() public onlyBy(owner) {
         require(startTime == 0);
-        // commits = {};
-        //startTime current time. Users send their committed value
-        startTime = block.timestamp;
-        //revealTime  time for revealing. User reveal their value
-        //endTime a winner can be computed
-        endTime = startTime + period;
     }
 
     //A taxpayer send his own commitment.
@@ -66,16 +54,6 @@ contract Lottery {
         require(block.timestamp >= startTime);
         require(block.timestamp < endTime);
         require(State(owner).isTaxpayerValid(msg.sender));
-        // require(Taxpayer(msg.sender).getYearsSinceBirth() < 65);
-
-        commits[msg.sender] = true;
-        taxpayer.push(msg.sender);
-    }
-
-    // Randomness provided by this is predicatable. Use with care!
-    function get_random_number_stupid_pattern() internal view returns (uint256) {
-        // t.test_vesting(2 weeks);
-        return uint256(blockhash(block.number - 1));
     }
 
     function setSealedSeed(bytes32 _sealedSeed) public onlyBy(owner) {
@@ -108,23 +86,5 @@ contract Lottery {
         // Block time stamp is not safe since the verifier could lie
 
         require(block.timestamp >= endTime);
-
-        uint256 winnerIndex = get_random_number_safe_pattern(_seed) % taxpayer.length;
-        address winnerAddress = taxpayer[winnerIndex];
-
-        // for (uint256 i = 0; i < revealed_len; i++) {
-        //     total += reveals[revealed[i]];
-        // }
-
-        Taxpayer(winnerAddress).wonLottery();
-        seedSet = false;
-        startTime = 0;
-
-        endTime = 0;
-        // The state pays
-        for (uint256 index = 0; index < taxpayer.length; index++) {
-            commits[taxpayer[index]] = false;
-        }
-        delete taxpayer;
     }
 }

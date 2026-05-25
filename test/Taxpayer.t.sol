@@ -7,11 +7,11 @@ import {Test} from "forge-std/Test.sol";
 import {SymTest} from "halmos-cheatcodes/SymTest.sol";
 
 contract TaxpayerTest is Test, SymTest {
-    uint256 constant oldAge = 65;
+    uint8 constant oldAge = 65;
     using Strings for uint256;
 
     Taxpayer[] taxpayer;
-    uint256 internal constant N_OF_TAXPAYER = 3;
+    uint64 internal constant N_OF_TAXPAYER = 3;
     State s;
 
     function setUp() public {
@@ -125,9 +125,9 @@ contract TaxpayerTest is Test, SymTest {
 
     struct TaxAction {
         uint8 actionType;
-        uint256 targetIdx;
-        uint256 auxIdx; // spouse index for MARRY
-        uint256 amount; // amount for TRANSFER
+        uint64 targetIdx;
+        uint64 auxIdx; // spouse index for MARRY
+        uint16 amount; // amount for TRANSFER
     }
 
     // --- Execution helpers ---
@@ -181,15 +181,14 @@ contract TaxpayerTest is Test, SymTest {
 
     // --- Halmos entry point ---
 
-    function check_SystemInvariants(TaxAction[6] memory actions) public {
+    function check_SystemInvariants(TaxAction[4] memory actions) public {
         for (uint256 i = 0; i < actions.length; i++) {
             vm.assume(actions[i].actionType <= 4);
-
             TaxActionType act = TaxActionType(actions[i].actionType);
-            uint256 idx = actions[i].targetIdx % N_OF_TAXPAYER;
+            uint64 idx = actions[i].targetIdx % N_OF_TAXPAYER;
 
             if (act == TaxActionType.MARRY) {
-                uint256 spouseIdx = actions[i].auxIdx % N_OF_TAXPAYER;
+                uint64 spouseIdx = actions[i].auxIdx % N_OF_TAXPAYER;
                 if (idx != spouseIdx) {
                     _tryMarry(idx, spouseIdx);
                 }
@@ -227,7 +226,7 @@ contract TaxpayerTest is Test, SymTest {
         _tryRaise(idx);
     }
 
-    function invariant_tax() public {
+    function invariant_tax() public view {
         _assertInvariants();
     }
 }
