@@ -5,7 +5,6 @@ import "./Lottery.sol";
 import "./Time.sol";
 
 contract State {
-    event AssertionFailed(string reason);
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
@@ -21,8 +20,8 @@ contract State {
         lottery = l;
     }
 
-    function isTaxpayerValid(address t) external view returns (bool) {
-        return taxpayer[t];
+    function isTaxpayerValid(address t1) external view returns (bool) {
+        return taxpayer[t1];
     }
 
     function isLotteryValid(address l) external view returns (bool) {
@@ -30,7 +29,6 @@ contract State {
     }
 
     function getLottery() external view returns (Lottery) {
-        // emit AssertionFailed("getLottery");
         return lottery;
     }
 
@@ -51,8 +49,8 @@ contract State {
         require(taxpayer[p1] == true || p1 == address(0));
         require(taxpayer[p2] == true || p2 == address(0));
 
-        Taxpayer t = new Taxpayer(p1, p2, dob);
-        taxpayer[address(t)] = true;
-        return t;
+        Taxpayer t1 = new Taxpayer(p1, p2, dob);
+        taxpayer[address(t1)] = true;
+        return t1;
     }
 }

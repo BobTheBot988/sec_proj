@@ -6,7 +6,6 @@ import "./Lottery.sol";
 import "./State.sol";
 
 contract Taxpayer {
-    event AssertionFailed(string reason);
     int256 immutable secondsFromUnix;
     uint256 constant oldAge = 65;
     bool isMarried;
@@ -51,10 +50,12 @@ contract Taxpayer {
     function getLotteryWins() public view returns (uint256) {
         return lottery_wins;
     }
-    function getLottery() public view returns (Lottery){
-      require(lottery != address(0));
-      return Lottery(lottery);
+
+    function getLottery() public view returns (Lottery) {
+        require(lottery != address(0));
+        return Lottery(lottery);
     }
+
     modifier nonReentrant() {
         require(!lock);
         lock = true;
@@ -80,7 +81,6 @@ contract Taxpayer {
     // this function was added and is different than the original code since it lacked getters
     function get_spouse() public view returns (Taxpayer) {
         // require(this.doesContractImplementInterface(spouse, type(ITaxpayer).interfaceId));
-        require(spouse != address(0));
         return Taxpayer(spouse);
     }
 
@@ -118,12 +118,9 @@ contract Taxpayer {
         Taxpayer(new_spouse).marry_me(this);
         Taxpayer(spouse).setPoolAllowance();
         // assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
-        if (address(this) != address(Taxpayer(new_spouse).get_spouse())) {
-            emit AssertionFailed("Post condition violated: You did not marry your spouse");
-        }
-        if (Taxpayer(spouse).getPoolAllowance() != pool_tax_allowance) {
-            emit AssertionFailed("The pool tax allowance must be the same in both spouses");
-        }
+        assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
+
+        assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
     }
 
     function divorce_me() public {
@@ -173,9 +170,7 @@ contract Taxpayer {
         sp_tax_allowance = sp.getTaxAllowance();
         sp.setTaxAllowance(sp_tax_allowance + change);
         // we need to make the DEFAULT_ALLOWANCE dynamic
-        if (sp.getTaxAllowance() + tax_allowance != (pool_tax_allowance)) {
-            emit AssertionFailed("You tried to cheat the system, PREPARE TO DIE!!!");
-        }
+        assert(sp.getTaxAllowance() + tax_allowance == (pool_tax_allowance));
     }
 
     function getPoolAllowance() public view returns (uint256) {
@@ -210,9 +205,7 @@ contract Taxpayer {
         lottery = address(0);
         if (spouse != address(0)) {
             Taxpayer(spouse).setPoolAllowance();
-            if (Taxpayer(spouse).getPoolAllowance() != pool_tax_allowance) {
-                emit AssertionFailed("The spouse has a diffent pool_tax_allowance");
-            }
+            assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
         }
     }
 
@@ -226,9 +219,7 @@ contract Taxpayer {
 
         if (spouse != address(0)) {
             Taxpayer(spouse).setPoolAllowance();
-            if (Taxpayer(spouse).getPoolAllowance() != pool_tax_allowance) {
-                emit AssertionFailed("The poll allowances do not match");
-            }
+            assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
         }
         // else {
         //     pool_tax_allowance = pool_tax_allowance % (tax_allowance + 1);
@@ -244,10 +235,8 @@ contract Taxpayer {
         require(spouse != address(0));
         require(msg.sender == spouse);
         tax_allowance = ta;
-        
-        if (Taxpayer(spouse).getTaxAllowance() + ta != (pool_tax_allowance)) {
-            emit AssertionFailed("You and your wife tried to cheat");
-        }
+
+        assert(Taxpayer(spouse).getTaxAllowance() + ta != (pool_tax_allowance));
     }
 
     function getTaxAllowance() public view returns (uint256) {
@@ -257,8 +246,6 @@ contract Taxpayer {
     function joinLottery() public {
         Lottery Lot = State(state).getLottery();
         lottery = address(Lot);
-
-
 
         // emit AssertionFailed("joined");
         Lottery(Lot).commit();
