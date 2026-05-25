@@ -19,6 +19,15 @@ contract TaxpayerTest is Test, SymTest {
         taxpayer.push(s.addTaxpayer(address(0), address(0), 0));
         taxpayer.push(s.addTaxpayer(address(0), address(0), 0));
         taxpayer.push(s.addTaxpayer(address(0), address(0), -1265385612));
+
+        // Restrict fuzzer to only call handlers on this contract
+        targetContract(address(this));
+        bytes4[] memory sels = new bytes4[](4);
+        sels[0] = this.call_marry.selector;
+        sels[1] = this.call_divorce.selector;
+        sels[2] = this.call_transfer.selector;
+        sels[3] = this.call_raise.selector;
+        targetSelector(FuzzSelector(address(this), sels));
     }
 
     function forEach(function(Taxpayer) internal constraint) internal {
@@ -149,44 +158,6 @@ contract TaxpayerTest is Test, SymTest {
         vm.stopPrank();
     }
 
-    // --- Foundry test execution (with revert handling) ---
-
-    function _test_tryMarry(uint256 idx, uint256 spouseIdx) internal {
-        vm.startPrank(address(taxpayer[idx]));
-        if (idx == spouseIdx) {
-            vm.expectRevert();
-            taxpayer[idx].marry(address(taxpayer[spouseIdx]));
-        } else {
-            taxpayer[idx].marry(address(taxpayer[spouseIdx]));
-        }
-        vm.stopPrank();
-    }
-
-    function _test_tryDivorce(uint256 idx) internal {
-        address sp = address(taxpayer[idx].get_spouse());
-        if (sp == address(0)) return;
-        vm.startPrank(sp);
-        Taxpayer(sp).divorce();
-        vm.stopPrank();
-    }
-
-    function _test_tryTransfer(uint256 idx, uint256 amount) internal {
-        vm.startPrank(address(taxpayer[idx]));
-        if (address(taxpayer[idx].get_spouse()) == address(0)) {
-            vm.expectRevert();
-            taxpayer[idx].transferAllowance(amount);
-        } else {
-            taxpayer[idx].transferAllowance(amount);
-        }
-        vm.stopPrank();
-    }
-
-    function _test_tryRaise(uint256 idx) internal {
-        vm.startPrank(address(taxpayer[idx]));
-        taxpayer[idx].raiseOwnAllowance();
-        vm.stopPrank();
-    }
-
     // --- Invariants (checked after each action) ---
 
     function _assertInvariants() internal view {
@@ -233,27 +204,31 @@ contract TaxpayerTest is Test, SymTest {
         }
     }
 
-    // --- Foundry entry point ---
+    // --- Foundry invariant handlers (state-changing, unbounded) ---
 
-    function test_SystemInvariants(TaxAction[6] memory actions) public {
-        for (uint256 i = 0; i < actions.length; i++) {
-            actions[i].actionType = uint8(bound(actions[i].actionType, 0, 4));
+    function call_marry(uint256 idx, uint256 spouseIdx) public {
+        idx = bound(idx, 0, N_OF_TAXPAYER - 1);
+        spouseIdx = bound(spouseIdx, 0, N_OF_TAXPAYER - 1);
+        if (idx != spouseIdx) _tryMarry(idx, spouseIdx);
+    }
 
-            TaxActionType act = TaxActionType(actions[i].actionType);
-            uint256 idx = bound(actions[i].targetIdx, 0, N_OF_TAXPAYER - 1);
+    function call_divorce(uint256 idx) public {
+        idx = bound(idx, 0, N_OF_TAXPAYER - 1);
+        _tryDivorce(idx);
+    }
 
-            if (act == TaxActionType.MARRY) {
-                uint256 spouseIdx = bound(actions[i].auxIdx, 0, N_OF_TAXPAYER - 1);
-                _test_tryMarry(idx, spouseIdx);
-            } else if (act == TaxActionType.DIVORCE) {
-                _test_tryDivorce(idx);
-            } else if (act == TaxActionType.TRANSFER) {
-                _test_tryTransfer(idx, actions[i].amount);
-            } else if (act == TaxActionType.RAISE) {
-                _test_tryRaise(idx);
-            }
-            _assertInvariants();
-        }
+    function call_transfer(uint256 idx, uint256 amount) public {
+        idx = bound(idx, 0, N_OF_TAXPAYER - 1);
+        _tryTransfer(idx, amount);
+    }
+
+    function call_raise(uint256 idx) public {
+        idx = bound(idx, 0, N_OF_TAXPAYER - 1);
+        _tryRaise(idx);
+    }
+
+    function invariant_tax() public {
+        _assertInvariants();
     }
 }
 

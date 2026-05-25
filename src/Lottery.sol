@@ -29,6 +29,10 @@ contract Lottery {
         _;
     }
 
+    function getStartTime() external returns (uint256) {
+        return startTime;
+    }
+
     function changeOwner(address _newOwner) public onlyBy(owner) {
         require(block.timestamp < endTime);
         require(_newOwner != address(0));
@@ -120,7 +124,7 @@ contract Lottery {
         // The state pays
         for (uint256 index = 0; index < taxpayer.length; index++) {
             commits[taxpayer[index]] = false;
-            taxpayer[index] = address(0);
         }
+        delete taxpayer;
     }
 }

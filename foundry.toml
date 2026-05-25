@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+ast = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 ignored_error_codes = [2462]
@@ -9,3 +10,7 @@ ignored_error_codes = [2462]
 
 runs = 100000
 fail_on_revert = false
+
+[invariant]
+runs = 1000
+depth = 50

@@ -236,7 +236,7 @@ contract Taxpayer {
         require(msg.sender == spouse);
         tax_allowance = ta;
 
-        assert(Taxpayer(spouse).getTaxAllowance() + ta != (pool_tax_allowance));
+        assert(Taxpayer(spouse).getTaxAllowance() + ta == (pool_tax_allowance));
     }
 
     function getTaxAllowance() public view returns (uint256) {
