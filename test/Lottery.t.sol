@@ -109,9 +109,9 @@ contract LotteryTest is Test, SymTest {
 
     struct LotAction {
         uint8 actionType;
-        uint256 playerIdx;
-        uint256 seed; // seed for END
-        uint256 warpTime; // time to warp for WARP
+        uint8 playerIdx;
+        uint8 seed; // seed for END
+        uint8 warpTime; // time to warp for WARP
     }
 
     // --- Execution helpers ---
@@ -144,9 +144,10 @@ contract LotteryTest is Test, SymTest {
         // 1. If committed, must be a valid taxpayer
         if (lot.getTaxPayer(address(p1))) {
             assert(s.isTaxpayerValid(address(p1)));
+
+            // 2. If committed, age must be < 65
+            assert((p1.getYearsSinceBirth() < 65));
         }
-        // 2. If committed, age must be < 65
-        assert(!lot.getTaxPayer(address(p1)) || (p1.getYearsSinceBirth() < 65));
     }
 
     // --- Halmos entry point ---
@@ -154,6 +155,7 @@ contract LotteryTest is Test, SymTest {
     function check_LotSystemInvariants(LotAction[4] memory actions) public {
         for (uint256 i = 0; i < actions.length; i++) {
             vm.assume(actions[i].actionType <= 4);
+            vm.assume(actions[i].playerIdx <= players.length);
 
             LotActionType act = LotActionType(actions[i].actionType);
 
@@ -167,8 +169,8 @@ contract LotteryTest is Test, SymTest {
             } else if (act == LotActionType.WARP) {
                 _tryWarp(actions[i].warpTime);
             }
-            forEach(_assertLotInvariants);
         }
+        forEach(_assertLotInvariants);
     }
 
     // --- Foundry invariant handlers (state-changing, unbounded) ---
