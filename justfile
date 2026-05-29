@@ -31,7 +31,23 @@ echidna:
     echidna . --contract TaxpayerTest --config echidna.yaml && 
     echidna . --contract LotteryTest --config echidna.yaml
 
+alias am := add-mcp
+alias as := add-skill
+alias d := debug
+
+add-skill:
+    npx skills install openzeppelin/openzeppelin-skills@develop-secure-contracts
+
+install:
+    forge install foundry-rs/forge-std && \
+    forge install OpenZeppelin/openzeppelin-foundry-upgrades &&  \
+    forge install OpenZeppelin/openzeppelin-contracts-upgradeable
+
+add-mcp:
+    claude mcp add --transport stdio solidity-synthesis -- mcp_synth --cwd . --project auction-deepseek-flash --invariants 1
 clean:
     forge clean
 run:
     claude --append-system-prompt-file prompt.md --dangerously-skip-permissions
+debug:
+    claude --debug mcp --debug-file /tmp/claude_debug.log --append-system-prompt-file prompt.md --dangerously-skip-permissions

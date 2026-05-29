@@ -36,17 +36,22 @@ contract Lottery {
     function changeOwner(address _newOwner) public onlyBy(owner) {
         require(block.timestamp < endTime);
         require(_newOwner != address(0));
+        owner = _newOwner;
     }
 
     // Initialize the registry with the lottery period.
     // The owner should be set
     constructor(uint256 p) {
         require(p > 0);
+        owner = msg.sender;
+        period = p;
     }
 
     //If the lottery has not started, anyone can invoke a lottery.
     function startLottery() public onlyBy(owner) {
         require(startTime == 0);
+        startTime = block.timestamp;
+        endTime = startTime + period;
     }
 
     //A taxpayer send his own commitment.
@@ -54,6 +59,8 @@ contract Lottery {
         require(block.timestamp >= startTime);
         require(block.timestamp < endTime);
         require(State(owner).isTaxpayerValid(msg.sender));
+        commits[msg.sender] = true;
+        taxpayer.push(msg.sender);
     }
 
     function setSealedSeed(bytes32 _sealedSeed) public onlyBy(owner) {
@@ -86,5 +93,17 @@ contract Lottery {
         // Block time stamp is not safe since the verifier could lie
 
         require(block.timestamp >= endTime);
+        require(taxpayer.length > 0);
+
+        uint256 rand = uint256(keccak256(abi.encodePacked(_seed, blockhash(block.number - 1))));
+        address winner = taxpayer[rand % taxpayer.length];
+        Taxpayer(winner).wonLottery();
+
+        // Reset state for next round
+        for (uint256 i = 0; i < taxpayer.length; i++) {
+            commits[taxpayer[i]] = false;
+        }
+        delete taxpayer;
+        startTime = 0;
     }
 }

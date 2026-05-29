@@ -125,9 +125,9 @@ contract TaxpayerTest is Test, SymTest {
 
     struct TaxAction {
         uint8 actionType;
-        uint64 targetIdx;
-        uint64 auxIdx; // spouse index for MARRY
-        uint16 amount; // amount for TRANSFER
+        uint8 targetIdx;
+        uint8 auxIdx; // spouse index for MARRY
+        uint8 amount; // amount for TRANSFER
     }
 
     // --- Execution helpers ---

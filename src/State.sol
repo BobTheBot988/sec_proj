@@ -37,11 +37,14 @@ contract State {
     }
 
     function proxy_endlottery(uint256 _seed) external onlyOwner {
-        
+        Lottery(lottery).endLottery(_seed);
     }
 
     function addTaxpayer(address p1, address p2, int256 dob) public onlyOwner returns (Taxpayer) {
         require(taxpayer[p1] == true || p1 == address(0));
         require(taxpayer[p2] == true || p2 == address(0));
+        Taxpayer t = new Taxpayer(p1, p2, dob);
+        taxpayer[address(t)] = true;
+        return t;
     }
 }

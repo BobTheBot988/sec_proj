@@ -65,6 +65,12 @@ contract Taxpayer {
 
     //Parents are taxpayers
     constructor(address p1, address p2, int256 _secondsFromUnix) {
+        parent1 = p1;
+        parent2 = p2;
+        secondsFromUnix = _secondsFromUnix;
+        state = msg.sender;
+        tax_allowance = DEFAULT_ALLOWANCE;
+        pool_tax_allowance = DEFAULT_ALLOWANCE;
     }
 
     // this function was added and is different than the original code since it lacked getters
@@ -83,6 +89,7 @@ contract Taxpayer {
         require(msg.sender == address(_spouse));
         require(address(_spouse) != address(this));
         require(State(state).isTaxpayerValid(address(_spouse)));
+        spouse = address(_spouse);
     }
 
     //We require new_spouse != address(0);
@@ -92,7 +99,13 @@ contract Taxpayer {
         require(new_spouse != address(0));
         require(address(new_spouse) != address(this));
 
+        Taxpayer(new_spouse).marry_me(Taxpayer(address(this)));
+
         assert(address(this) == address(Taxpayer(new_spouse).get_spouse()));
+
+        spouse = new_spouse;
+        pool_tax_allowance = tax_allowance + Taxpayer(new_spouse).getTaxAllowance();
+        Taxpayer(new_spouse).setPoolAllowance();
 
         assert(Taxpayer(spouse).getPoolAllowance() == pool_tax_allowance);
     }
@@ -101,11 +114,14 @@ contract Taxpayer {
         require(spouse != address(0));
         require(msg.sender == spouse);
         require(address(Taxpayer(spouse).get_spouse()) == address(0));
-        
+        spouse = address(0);
     }
 
     function divorce() public {
         require(spouse != address(0));
+        address prevSpouse = spouse;
+        spouse = address(0);
+        Taxpayer(prevSpouse).divorce_me();
     }
 
     /* Transfer part of tax allowance to own spouse */
@@ -116,7 +132,9 @@ contract Taxpayer {
 
         require(sp_tax_allowance + tax_allowance == (pool_tax_allowance));
 
-        
+        tax_allowance -= change;
+        sp.setTaxAllowance(sp_tax_allowance + change);
+
         assert(sp.getTaxAllowance() + tax_allowance == (pool_tax_allowance));
     }
 
@@ -128,19 +146,29 @@ contract Taxpayer {
         require(spouse != address(0));
         require(msg.sender == spouse);
 
-        
+        pool_tax_allowance = tax_allowance + Taxpayer(spouse).getTaxAllowance();
     }
 
     function wonLottery() public {
         require(lottery != address(0));
         require(lottery == msg.sender);
-        
+        lottery_wins += 1;
+        tax_allowance += 2000;
+        pool_tax_allowance += 2000;
+        if (spouse != address(0)) {
+            Taxpayer(spouse).setPoolAllowance();
+        }
     }
 
     function raiseOwnAllowance() public {
         require(getYearsSinceBirth() >= oldAge);
         require(counter == false);
-       
+        counter = true;
+        tax_allowance += 2000;
+        pool_tax_allowance += 2000;
+        if (spouse != address(0)) {
+            Taxpayer(spouse).setPoolAllowance();
+        }
     }
 
     // function getAge() public view returns (uint256) {
@@ -152,6 +180,8 @@ contract Taxpayer {
         require(spouse != address(0));
         require(msg.sender == spouse);
 
+        tax_allowance = ta;
+
         assert(Taxpayer(spouse).getTaxAllowance() + ta == (pool_tax_allowance));
     }
 
@@ -160,6 +190,10 @@ contract Taxpayer {
     }
 
     function joinLottery() public {
+        require(State(state).isTaxpayerValid(address(this)));
+        Lottery l = State(state).getLottery();
+        lottery = address(l);
+        l.commit();
     }
 
     // function revealLottery() public {
