@@ -199,8 +199,8 @@ contract TaxpayerTest is Test, SymTest {
             } else if (act == TaxActionType.RAISE) {
                 _tryRaise(idx);
             }
-            _assertInvariants();
         }
+        _assertInvariants();
     }
 
     // --- Foundry invariant handlers (state-changing, unbounded) ---
